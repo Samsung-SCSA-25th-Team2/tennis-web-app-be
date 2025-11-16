@@ -4,6 +4,7 @@ import com.example.scsa.domain.vo.Age;
 import com.example.scsa.domain.vo.Gender;
 import com.example.scsa.domain.vo.Period;
 import jakarta.persistence.*;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -57,13 +58,60 @@ public class User extends BaseTimeEntity {
     private String imgUrl;  // 카카오 프로필 이미지 URL
 
     // 생성자: 필수 정보를 받아 User 객체 생성
+    @Builder
     public User(String nickname, Gender gender, Period period, Age age, String name, String imgUrl) {
+        validateNickname(nickname);
         this.nickname = nickname;
         this.gender = gender;
         this.period = period;
         this.age = age;
         this.name = name;
         this.imgUrl = imgUrl;
+    }
+
+    // 닉네임 검증
+    private void validateNickname(String nickname) {
+        if (nickname == null || nickname.trim().isEmpty()) {
+            throw new IllegalArgumentException("닉네임은 필수입니다.");
+        }
+        if (nickname.length() > 20) {
+            throw new IllegalArgumentException("닉네임은 20자 이하여야 합니다.");
+        }
+    }
+
+    // 비즈니스 로직: 프로필 정보 수정
+    public void updateProfile(String nickname, String imgUrl) {
+        if (nickname != null) {
+            validateNickname(nickname);
+            this.nickname = nickname;
+        }
+        if (imgUrl != null) {
+            this.imgUrl = imgUrl;
+        }
+    }
+
+    // 비즈니스 로직: 테니스 경력 업데이트
+    public void updatePeriod(Period period) {
+        this.period = period;
+    }
+
+    // 비즈니스 로직: 나이대 업데이트
+    public void updateAge(Age age) {
+        this.age = age;
+    }
+
+    // equals & hashCode: JPA에서 엔티티 동등성 비교를 위해 오버라이드
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof User)) return false;
+        User user = (User) o;
+        return id != null && id.equals(user.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return id != null ? id.hashCode() : getClass().hashCode();
     }
 
 }

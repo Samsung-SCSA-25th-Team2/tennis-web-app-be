@@ -10,9 +10,9 @@ import lombok.NoArgsConstructor;
  * 한 매치에 여러 유저가 참여할 수 있고, 한 유저는 여러 매치에 참여할 수 있음
  *
  * 설계 참고:
- * - host(호스트)도 이 테이블에 포함됨 (isHost = true)
- * - 일반 참가자는 isHost = false
- * - 이를 통해 전체 참가자를 한 번에 조회 가능
+ * - host(호스트) 여부는 Match.host_id와 비교하여 판단 (match.host.id == user.id)
+ * - is_host 필드를 제거하여 데이터 중복 및 불일치 방지
+ * - 전체 참가자(호스트 포함)를 한 번에 조회 가능
  */
 @Entity
 @Table(
@@ -42,15 +42,29 @@ public class MatchGuest {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    // 호스트 여부: true = 매치 생성자(호스트), false = 일반 참가자
-    @Column(nullable = false)
-    private Boolean isHost;
-
     // 생성자: 매치 참가 정보 생성
-    public MatchGuest(Match match, User user, Boolean isHost) {
+    public MatchGuest(Match match, User user) {
         this.match = match;
         this.user = user;
-        this.isHost = isHost;
+    }
+
+    // 비즈니스 로직: 이 참가자가 호스트인지 확인
+    public boolean isHost() {
+        return match.getHost().equals(user);
+    }
+
+    // equals & hashCode: JPA에서 엔티티 동등성 비교를 위해 오버라이드
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof MatchGuest)) return false;
+        MatchGuest that = (MatchGuest) o;
+        return id != null && id.equals(that.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return id != null ? id.hashCode() : getClass().hashCode();
     }
 
 }

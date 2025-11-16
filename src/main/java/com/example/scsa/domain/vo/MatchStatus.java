@@ -5,5 +5,5 @@ package com.example.scsa.domain.vo;
  */
 public enum MatchStatus {
     RECRUITING,  // 모집중
-    COMPLETED,   // 완료됨
+    COMPLETED   // 완료됨
 }

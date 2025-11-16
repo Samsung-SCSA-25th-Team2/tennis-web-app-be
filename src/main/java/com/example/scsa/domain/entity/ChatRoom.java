@@ -3,8 +3,6 @@ package com.example.scsa.domain.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -12,14 +10,26 @@ import java.util.List;
 
 /**
  * 채팅방 엔티티
- * 1:1 채팅방을 관리 (host와 guest 간의 채팅방)
+ * 매치 내에서 두 유저 간의 1:1 채팅방을 관리
+ *
+ * 설계 참고:
+ * - 하나의 매치에서 여러 채팅방 생성 가능 (호스트-게스트1, 호스트-게스트2, ...)
+ * - user1, user2: 채팅방의 두 참여자 (순서 무관)
+ * - match: 어느 매치에서 만났는지 기록 (선택적, nullable)
+ * - unique constraint: 같은 매치에서 같은 두 유저 간 채팅방 중복 방지
+ * - CreatableEntity 상속으로 createdAt 자동 관리
  */
 @Entity
-@EntityListeners(AuditingEntityListener.class) // createdAt 자동 설정을 위한 리스너
-@Table(name = "chat_room")
+@Table(
+    name = "chat_room",
+    uniqueConstraints = @UniqueConstraint(
+        name = "uk_chat_room_match_users",
+        columnNames = {"match_id", "user1_id", "user2_id"}
+    )
+)
 @Getter
 @NoArgsConstructor
-public class ChatRoom {
+public class ChatRoom extends CreatableEntity {
 
     // 기본키: 자동 증가 방식
     @Id
@@ -27,15 +37,20 @@ public class ChatRoom {
     @Column(name = "chat_room_id")
     private Long id;
 
-    // 채팅방 개설자: 지연 로딩으로 성능 최적화
+    // 연관된 매치: 어느 매치에서 만났는지
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "host_id", nullable = false)
-    private User host;
+    @JoinColumn(name = "match_id", nullable = false)
+    private Match match;
 
-    // 채팅 상대방: 지연 로딩으로 성능 최적화
+    // 채팅방 참여자 1: 보통 호스트 (순서는 중요하지 않음)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "guest_id", nullable = false)
-    private User guest;
+    @JoinColumn(name = "user1_id", nullable = false)
+    private User user1;
+
+    // 채팅방 참여자 2: 보통 게스트 (순서는 중요하지 않음)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user2_id", nullable = false)
+    private User user2;
 
     // 양방향 관계: 이 채팅방에 속한 메시지 목록
     // cascade: 채팅방 삭제 시 메시지도 함께 삭제
@@ -43,15 +58,98 @@ public class ChatRoom {
     @OneToMany(mappedBy = "chatRoom", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Chat> chats = new ArrayList<>();
 
-    // 채팅방 생성 시간: @CreatedDate로 자동 설정
-    @CreatedDate
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    // 마지막 메시지 시간: 채팅방 목록 정렬에 사용
+    @Column(name = "last_message_at")
+    private LocalDateTime lastMessageAt;
 
-    // 생성자: 채팅방 생성 (host와 guest 정보 필수)
-    public ChatRoom(User host, User guest) {
-        this.host = host;
-        this.guest = guest;
+    // 마지막 메시지 미리보기: UI에서 표시용
+    @Column(name = "last_message_preview", length = 100)
+    private String lastMessagePreview;
+
+    // 생성자: 채팅방 생성 (매치 기반)
+    public ChatRoom(Match match, User user1, User user2) {
+        validateUsers(user1, user2);
+        this.match = match;
+        this.user1 = user1;
+        this.user2 = user2;
+    }
+
+    /**
+     * // 생성자: 채팅방 생성 (매치 없이) -> 불가능
+     *     public ChatRoom(User user1, User user2) {
+     *         validateUsers(user1, user2);
+     *         this.match = null;
+     *         this.user1 = user1;
+     *         this.user2 = user2;
+     *     }
+     */
+
+    // 유저 검증
+    private void validateUsers(User user1, User user2) {
+        if (user1 == null || user2 == null) {
+            throw new IllegalArgumentException("채팅방 참여자는 필수입니다.");
+        }
+        if (user1.equals(user2)) {
+            throw new IllegalArgumentException("같은 사용자끼리 채팅방을 만들 수 없습니다.");
+        }
+    }
+
+    // 양방향 연관관계 편의 메서드: 채팅 메시지 추가
+    public void addChat(Chat chat) {
+        this.chats.add(chat);
+        updateLastMessage(chat);
+    }
+
+    // 비즈니스 로직: 마지막 메시지 정보 업데이트
+    public void updateLastMessage(Chat chat) {
+        this.lastMessageAt = chat.getCreatedAt();
+        // 메시지가 너무 길면 100자로 자르기
+        String message = chat.getMessage();
+        this.lastMessagePreview = message.length() > 100
+            ? message.substring(0, 100)
+            : message;
+    }
+
+    // 비즈니스 로직: 특정 유저의 상대방 조회
+    public User getOtherUser(User user) {
+        if (user.equals(user1)) {
+            return user2;
+        } else if (user.equals(user2)) {
+            return user1;
+        }
+        throw new IllegalArgumentException("해당 유저는 이 채팅방의 참여자가 아닙니다.");
+    }
+
+    // 비즈니스 로직: 특정 유저가 이 채팅방의 참여자인지 확인
+    public boolean isParticipant(User user) {
+        return user.equals(user1) || user.equals(user2);
+    }
+
+    // 비즈니스 로직: 채팅방의 모든 참가자 조회
+    public List<User> getParticipants() {
+        return List.of(user1, user2);
+    }
+
+    // 비즈니스 로직: 매치의 호스트인지 확인 (match가 있는 경우에만)
+    public boolean isHost(User user) {
+        if (match == null) {
+            return false;
+        }
+        return match.getHost().equals(user);
+    }
+
+    // equals & hashCode: JPA에서 엔티티 동등성 비교를 위해 오버라이드
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof ChatRoom)) return false;
+        ChatRoom chatRoom = (ChatRoom) o;
+        return id != null && id.equals(chatRoom.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return id != null ? id.hashCode() : getClass().hashCode();
     }
 
 }

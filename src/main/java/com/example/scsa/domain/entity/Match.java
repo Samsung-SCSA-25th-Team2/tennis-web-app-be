@@ -2,6 +2,7 @@ package com.example.scsa.domain.entity;
 
 import com.example.scsa.domain.vo.*;
 import jakarta.persistence.*;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -18,7 +19,7 @@ import java.util.Set;
  * BaseTimeEntity 상속으로 createdAt, lastModifiedAt 자동 관리
  */
 @Entity
-@Table(name = "match")
+@Table(name = "`match`")  // MySQL 예약어이므로 백틱 사용
 @Getter
 @NoArgsConstructor
 public class Match extends BaseTimeEntity {
@@ -89,16 +90,40 @@ public class Match extends BaseTimeEntity {
     private String description;
 
     // 생성자: 매치 생성 시 필수 정보 입력
+    @Builder
     public Match(User host, Court court, MatchStatus matchStatus,
                  LocalDateTime matchStartDateTime, LocalDateTime matchEndDateTime,
                  Long fee, String description) {
+        validateMatchTime(matchStartDateTime, matchEndDateTime);
+        validateFee(fee);
+
         this.host = host;
         this.court = court;
-        this.matchStatus = matchStatus;
+        this.matchStatus = matchStatus != null ? matchStatus : MatchStatus.RECRUITING;
         this.matchStartDateTime = matchStartDateTime;
         this.matchEndDateTime = matchEndDateTime;
         this.fee = fee;
         this.description = description;
+
+        // 매치 생성 시 호스트를 참가자 목록에 자동 추가
+        addGuest(host);
+    }
+
+    // 매치 시간 검증
+    private void validateMatchTime(LocalDateTime start, LocalDateTime end) {
+        if (start == null || end == null) {
+            throw new IllegalArgumentException("매치 시작/종료 시간은 필수입니다.");
+        }
+        if (end.isBefore(start) || end.isEqual(start)) {
+            throw new IllegalArgumentException("매치 종료 시간은 시작 시간 이후여야 합니다.");
+        }
+    }
+
+    // 참가비 검증
+    private void validateFee(Long fee) {
+        if (fee == null || fee < 0) {
+            throw new IllegalArgumentException("참가비는 0원 이상이어야 합니다.");
+        }
     }
 
     // 비즈니스 로직: 모집 조건에 나이대 추가
@@ -119,6 +144,66 @@ public class Match extends BaseTimeEntity {
     // 비즈니스 로직: 매치 상태 변경 (모집중 → 완료 등)
     public void updateMatchStatus(MatchStatus newStatus) {
         this.matchStatus = newStatus;
+    }
+
+    // 비즈니스 로직: 참가자 추가 (양방향 관계 설정)
+    public MatchGuest addGuest(User user) {
+        // 중복 참가 방지
+        boolean alreadyJoined = matchGuests.stream()
+            .anyMatch(mg -> mg.getUser().equals(user));
+
+        if (alreadyJoined) {
+            throw new IllegalStateException("이미 참가한 매치입니다.");
+        }
+
+        MatchGuest matchGuest = new MatchGuest(this, user);
+        this.matchGuests.add(matchGuest);
+        return matchGuest;
+    }
+
+    // 비즈니스 로직: 참가자 제거 (양방향 관계 해제)
+    public void removeGuest(User user) {
+        // 호스트는 제거 불가
+        if (this.host.equals(user)) {
+            throw new IllegalStateException("매치 생성자는 참가를 취소할 수 없습니다.");
+        }
+
+        matchGuests.removeIf(mg -> mg.getUser().equals(user));
+    }
+
+    // 비즈니스 로직: 현재 참가 인원 조회
+    public int getCurrentGuestCount() {
+        return matchGuests.size();
+    }
+
+    // 비즈니스 로직: 특정 사용자가 참가했는지 확인
+    public boolean isUserJoined(User user) {
+        return matchGuests.stream()
+            .anyMatch(mg -> mg.getUser().equals(user));
+    }
+
+    // 비즈니스 로직: 매치가 모집중인지 확인
+    public boolean isRecruiting() {
+        return this.matchStatus == MatchStatus.RECRUITING;
+    }
+
+    // 비즈니스 로직: 매치 완료 처리
+    public void complete() {
+        this.matchStatus = MatchStatus.COMPLETED;
+    }
+
+    // equals & hashCode: JPA에서 엔티티 동등성 비교를 위해 오버라이드
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Match)) return false;
+        Match match = (Match) o;
+        return id != null && id.equals(match.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return id != null ? id.hashCode() : getClass().hashCode();
     }
 
 }

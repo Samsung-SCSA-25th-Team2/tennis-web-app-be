@@ -45,6 +45,8 @@ public class SecurityConfig {
                         // Public 경로
                         .requestMatchers("/", "/index.html", "/oauth2/**", "/error", "/favicon.ico").permitAll()
                         .requestMatchers("/api/v1/auth/status", "/api/v1/auth/logout").permitAll() // 인증 상태 조회 및 로그아웃은 누구나 가능
+                        // Swagger UI 경로
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
                         // Protected API - JWT 인증 필요
                         .requestMatchers("/api/v1/auth/me").hasRole("USER")
                         // 나머지는 모두 허용 (개발 중)

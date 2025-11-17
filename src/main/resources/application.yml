@@ -54,4 +54,16 @@ logging:
 
 jwt:
   secret: scsa-25th-team2-forever-jwt-secret-key-for-development-only-minimum-256-bits-required
-  expiration: 600000  # 10분 (밀리초 단위)
+  expiration: 60000  # 1분 (1분 만료 테스트 -> 통과)
+
+# SpringDoc OpenAPI (Swagger) 설정
+springdoc:
+  api-docs:
+    path: /v3/api-docs  # OpenAPI 3.0 문서 경로
+  swagger-ui:
+    path: /swagger-ui.html  # Swagger UI 접속 경로
+    tags-sorter: alpha  # 태그를 알파벳 순으로 정렬
+    operations-sorter: alpha  # API를 알파벳 순으로 정렬
+    display-request-duration: true  # 요청 처리 시간 표시
+    try-it-out-enabled: true  # Try it out 버튼 활성화
+  show-actuator: false  # Spring Actuator 엔드포인트 숨김

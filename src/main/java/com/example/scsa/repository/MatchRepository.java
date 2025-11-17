@@ -307,4 +307,42 @@ public interface MatchRepository extends JpaRepository<Match, Long> {
            "WHERE m.host = :user OR mg.user = :user")
     long countByUserParticipating(@Param("user") User user);
 
+    /**
+     * 특정 코트의 매치 목록 조회 (기간 범위)
+     *
+     * 사용 시나리오:
+     * - 특정 코트의 예약 현황 조회
+     * - 코트별 매치 일정 확인
+     *
+     * @param courtId 코트 ID
+     * @param start 시작 시간
+     * @param end 종료 시간
+     * @return 해당 코트의 매치 목록
+     */
+    @Query("SELECT m FROM Match m " +
+           "LEFT JOIN FETCH m.host " +
+           "WHERE m.court.id = :courtId " +
+           "AND m.matchStartDateTime BETWEEN :start AND :end " +
+           "ORDER BY m.matchStartDateTime ASC")
+    List<Match> findByCourtIdAndDateRange(
+        @Param("courtId") Long courtId,
+        @Param("start") LocalDateTime start,
+        @Param("end") LocalDateTime end
+    );
+
+    /**
+     * 특정 코트의 모든 매치 조회
+     *
+     * 사용 시나리오:
+     * - 코트별 전체 매치 내역
+     *
+     * @param courtId 코트 ID
+     * @return 해당 코트의 모든 매치
+     */
+    @Query("SELECT m FROM Match m " +
+           "LEFT JOIN FETCH m.host " +
+           "WHERE m.court.id = :courtId " +
+           "ORDER BY m.matchStartDateTime DESC")
+    List<Match> findByCourtId(@Param("courtId") Long courtId);
+
 }

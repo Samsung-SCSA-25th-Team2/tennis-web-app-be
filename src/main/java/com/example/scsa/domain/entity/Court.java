@@ -1,21 +1,28 @@
-package com.example.scsa.domain.vo;
+package com.example.scsa.domain.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * 테니스 코트 값 객체 (Value Object)
- * Match 엔티티에 임베디드되어 코트 정보를 관리
+ * 테니스 코트 엔티티
+ * 테니스 코트 정보를 관리하는 독립적인 엔티티
  *
  * 설계 참고:
- * - @Embeddable: 별도 테이블이 아닌 Match 테이블에 컬럼으로 포함됨
- * - 불변성 권장: Setter 없이 생성자로만 객체 생성
+ * - @Entity: 별도 테이블로 관리됨
+ * - Match 엔티티와 다대일 관계로 연결
  */
-@Embeddable
+@Entity
+@Table(name = "court")
 @Getter
-@NoArgsConstructor // JPA에서 프록시 객체 생성을 위해 필수
+@NoArgsConstructor
 public class Court {
+
+    // 기본키: 자동 증가 방식
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "court_id")
+    private Long id;
 
     // 코트 이름: 최대 50자
     @Column(nullable = false, length = 50)

@@ -7,7 +7,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: none
     show-sql: true
     properties:
       hibernate:
@@ -40,13 +40,13 @@ spring:
     password: guest
 
 server:
-  port: 8080
+  port: 8888
 
 logging:
   level:
     #    org.springframework.boot: ERROR
     org.springframework.web: DEBUG
-    org.springframework.security: DEBUG
+#    org.springframework.security: DEBUG
     org.springframework.data.jpa: DEBUG
-    com.zaxxer.hikari: DEBUG
-    org.hibernate: DEBUG
+#    com.zaxxer.hikari: DEBUG
+#    org.hibernate: DEBUG

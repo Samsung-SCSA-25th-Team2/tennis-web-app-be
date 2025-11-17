@@ -49,6 +49,19 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByNickname(String nickname);
 
     /**
+     * OAuth2 Provider와 ProviderId로 유저 조회
+     *
+     * 사용 시나리오:
+     * - 소셜 로그인 시 기존 회원 확인
+     * - 카카오 로그인 등
+     *
+     * @param provider 소셜 로그인 제공자 (kakao, google 등)
+     * @param providerId 제공자로부터 받은 고유 ID
+     * @return 해당 소셜 계정의 유저
+     */
+    Optional<User> findByProviderAndProviderId(String provider, String providerId);
+
+    /**
      * 카카오 이름으로 유저 조회
      *
      * 사용 시나리오:
@@ -125,4 +138,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT COUNT(u) FROM User u")
     long countAllUsers();
 
+    Optional<User> findByProviderId(String username);
 }

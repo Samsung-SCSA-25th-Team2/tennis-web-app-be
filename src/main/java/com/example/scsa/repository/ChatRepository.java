@@ -3,6 +3,8 @@ package com.example.scsa.repository;
 import com.example.scsa.domain.entity.Chat;
 import com.example.scsa.domain.entity.ChatRoom;
 import com.example.scsa.domain.entity.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -138,5 +140,31 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
            "AND c.sender != :currentUser")
     long countUnreadMessages(@Param("chatRoom") ChatRoom chatRoom,
                              @Param("currentUser") User currentUser);
+
+    /**
+     * 특정 채팅방의 메시지 목록 조회 - 페이징 (N+1 방지: sender fetch join)
+     *
+     * 사용 시나리오:
+     * - 채팅방의 메시지 무한 스크롤
+     * - 메시지 페이징 처리
+     *
+     * N+1 해결:
+     * - fetch join으로 sender를 한 번에 조회
+     * - 메시지 표시 시 필요한 발신자 정보(닉네임, 프로필 등) 함께 로드
+     *
+     * @param chatRoomId 채팅방 ID
+     * @param pageable 페이지 정보
+     * @return 메시지 페이지 (sender 포함)
+     */
+    @Query(value = "SELECT c FROM Chat c " +
+                   "LEFT JOIN FETCH c.sender " +
+                   "WHERE c.chatRoom.id = :chatRoomId " +
+                   "ORDER BY c.createdAt DESC",
+           countQuery = "SELECT COUNT(c) FROM Chat c " +
+                        "WHERE c.chatRoom.id = :chatRoomId")
+    Page<Chat> findByChatRoomIdWithSender(
+        @Param("chatRoomId") Long chatRoomId,
+        Pageable pageable
+    );
 
 }

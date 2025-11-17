@@ -9,9 +9,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.util.ArrayList;
-import java.util.List;
-
 @Entity
 @Table(name = "user")
 @Getter
@@ -22,9 +19,6 @@ public class User extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
     private Long id;
-
-    @OneToMany(mappedBy = "user")
-    private List<MatchGuest> matchGuests = new ArrayList<>();
 
     @Column(nullable = false, unique = true)
     private String nickname;

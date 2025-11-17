@@ -3,6 +3,8 @@ package com.example.scsa.repository;
 import com.example.scsa.domain.entity.Match;
 import com.example.scsa.domain.entity.MatchGuest;
 import com.example.scsa.domain.entity.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -160,5 +162,33 @@ public interface MatchGuestRepository extends JpaRepository<MatchGuest, Long> {
      */
     @Query("SELECT COUNT(mg) FROM MatchGuest mg WHERE mg.user = :user")
     long countByUser(@Param("user") User user);
+
+    /**
+     * 특정 유저가 참가한 MatchGuest 목록 조회 - 페이징 (N+1 방지: match, court, host fetch join)
+     *
+     * 사용 시나리오:
+     * - 내가 참가한 매치 목록 조회 (페이징)
+     * - 무한 스크롤 구현
+     *
+     * N+1 해결:
+     * - fetch join으로 match, court, host를 한 번에 조회
+     * - 매치 목록 화면에 필요한 모든 정보 포함
+     *
+     * @param userId 유저 ID
+     * @param pageable 페이지 정보
+     * @return 유저가 참가한 MatchGuest 페이지 (match, court, host 포함)
+     */
+    @Query(value = "SELECT mg FROM MatchGuest mg " +
+                   "LEFT JOIN FETCH mg.match m " +
+                   "LEFT JOIN FETCH m.court " +
+                   "LEFT JOIN FETCH m.host " +
+                   "WHERE mg.user.id = :userId " +
+                   "ORDER BY m.matchStartDateTime DESC",
+           countQuery = "SELECT COUNT(mg) FROM MatchGuest mg " +
+                        "WHERE mg.user.id = :userId")
+    Page<MatchGuest> findByUserIdWithMatch(
+        @Param("userId") Long userId,
+        Pageable pageable
+    );
 
 }

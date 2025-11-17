@@ -42,9 +42,15 @@ public class Match extends BaseTimeEntity {
     @OneToMany(mappedBy = "match", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<MatchGuest> matchGuests = new ArrayList<>();
 
-    // 경기장 정보: Court는 별도 테이블이 아닌 Match 테이블에 함께 저장됨
-    @Embedded
+    // 경기장 정보: Court 엔티티와 다대일 관계
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "court_id", nullable = false)
     private Court court;
+
+    // 경기 타입: SINGLES(단식), MEN_DOUBLES(남자 복식), WOMEN_DOUBLES(여자 복식), MIXED_DOUBLES(혼합 복식)
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private GameType gameType;
 
     // 매치 상태: RECRUITING(모집중), COMPLETED(완료됨)
     @Enumerated(EnumType.STRING)
@@ -91,7 +97,7 @@ public class Match extends BaseTimeEntity {
 
     // 생성자: 매치 생성 시 필수 정보 입력
     @Builder
-    public Match(User host, Court court, MatchStatus matchStatus,
+    public Match(User host, Court court, GameType gameType, MatchStatus matchStatus,
                  LocalDateTime matchStartDateTime, LocalDateTime matchEndDateTime,
                  Long fee, String description) {
         validateMatchTime(matchStartDateTime, matchEndDateTime);
@@ -99,6 +105,7 @@ public class Match extends BaseTimeEntity {
 
         this.host = host;
         this.court = court;
+        this.gameType = gameType;
         this.matchStatus = matchStatus != null ? matchStatus : MatchStatus.RECRUITING;
         this.matchStartDateTime = matchStartDateTime;
         this.matchEndDateTime = matchEndDateTime;

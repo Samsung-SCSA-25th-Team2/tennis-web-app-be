@@ -8,6 +8,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create
+      default_batch_fetch_size: 100 # 쿼리 한번에 대한, row batch_size
     show-sql: true
     properties:
       hibernate:

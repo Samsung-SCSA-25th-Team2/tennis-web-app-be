@@ -1,7 +1,6 @@
 package com.example.scsa.repository;
 
 import com.example.scsa.domain.entity.ChatRoom;
-import com.example.scsa.domain.entity.Match;
 import com.example.scsa.domain.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -47,7 +46,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
      * 사용 시나리오:
      * - 특정 매치에서 두 유저가 이미 채팅방을 만들었는지 확인
      *
-     * @param match 매치
+     * @param matchId 매치 ID
      * @param user1 첫 번째 유저
      * @param user2 두 번째 유저
      * @return 해당 매치의 두 유저 간 채팅방
@@ -55,11 +54,11 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     @Query("SELECT cr FROM ChatRoom cr " +
            "LEFT JOIN FETCH cr.user1 " +
            "LEFT JOIN FETCH cr.user2 " +
-           "WHERE cr.match = :match AND " +
+           "WHERE cr.matchId = :matchId AND " +
            "((cr.user1 = :user1 AND cr.user2 = :user2) OR " +
            "(cr.user1 = :user2 AND cr.user2 = :user1))")
-    Optional<ChatRoom> findByMatchAndUsers(
-        @Param("match") Match match,
+    Optional<ChatRoom> findByMatchIdAndUsers(
+        @Param("matchId") Long matchId,
         @Param("user1") User user1,
         @Param("user2") User user2
     );
@@ -70,21 +69,22 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
      * 사용 시나리오:
      * - 매치에서 생성된 모든 채팅방 목록 확인
      *
-     * @param match 매치
+     * @param matchId 매치 ID
      * @return 매치의 채팅방 목록
      */
     @Query("SELECT cr FROM ChatRoom cr " +
            "LEFT JOIN FETCH cr.user1 " +
            "LEFT JOIN FETCH cr.user2 " +
-           "WHERE cr.match = :match " +
+           "WHERE cr.matchId = :matchId " +
            "ORDER BY cr.createdAt DESC")
-    List<ChatRoom> findByMatch(@Param("match") Match match);
+    List<ChatRoom> findByMatchId(@Param("matchId") Long matchId);
 
     /**
-     * 특정 유저가 참여한 모든 채팅방 조회 (N+1 방지: user1, user2, match fetch join)
+     * 특정 유저가 참여한 모든 채팅방 조회 (N+1 방지: user1, user2 fetch join)
      *
      * N+1 해결:
-     * - fetch join으로 user1, user2, match를 한 번에 조회
+     * - fetch join으로 user1, user2를 한 번에 조회
+     * - matchId는 FK로만 보관 (느슨한 결합)
      *
      * @param user 조회할 유저
      * @return 유저가 참여한 채팅방 목록
@@ -92,7 +92,6 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     @Query("SELECT DISTINCT cr FROM ChatRoom cr " +
            "LEFT JOIN FETCH cr.user1 " +
            "LEFT JOIN FETCH cr.user2 " +
-           "LEFT JOIN FETCH cr.match " +
            "WHERE cr.user1 = :user OR cr.user2 = :user " +
            "ORDER BY cr.lastMessageAt DESC, cr.createdAt DESC")
     List<ChatRoom> findByUser(@Param("user") User user);
@@ -104,18 +103,18 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
      * - 매치별 채팅방 목록 필터링
      *
      * @param user 유저
-     * @param match 매치
+     * @param matchId 매치 ID
      * @return 해당 매치에서 유저가 참여한 채팅방 목록
      */
     @Query("SELECT cr FROM ChatRoom cr " +
            "LEFT JOIN FETCH cr.user1 " +
            "LEFT JOIN FETCH cr.user2 " +
-           "WHERE cr.match = :match AND (cr.user1 = :user OR cr.user2 = :user) " +
+           "WHERE cr.matchId = :matchId AND (cr.user1 = :user OR cr.user2 = :user) " +
            "ORDER BY cr.createdAt DESC")
-    List<ChatRoom> findByUserAndMatch(@Param("user") User user, @Param("match") Match match);
+    List<ChatRoom> findByUserIdAndMatchId(@Param("user") User user, @Param("matchId") Long matchId);
 
     /**
-     * 채팅방 상세 조회 (N+1 방지: user1, user2, match, chats 모두 fetch join)
+     * 채팅방 상세 조회 (N+1 방지: user1, user2, chats 모두 fetch join)
      * 채팅방과 함께 모든 메시지까지 한 번에 조회
      *
      * 사용 시나리오:
@@ -126,12 +125,11 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
      * - 메시지가 많을 경우 성능 이슈 가능 → 페이징 필요 시 별도 메서드 고려
      *
      * @param id 채팅방 ID
-     * @return 채팅방 상세 정보 (user1, user2, match, chats 포함)
+     * @return 채팅방 상세 정보 (user1, user2, chats 포함)
      */
     @Query("SELECT DISTINCT cr FROM ChatRoom cr " +
            "LEFT JOIN FETCH cr.user1 " +
            "LEFT JOIN FETCH cr.user2 " +
-           "LEFT JOIN FETCH cr.match " +
            "LEFT JOIN FETCH cr.chats " +
            "WHERE cr.id = :id")
     Optional<ChatRoom> findByIdWithChats(@Param("id") Long id);
@@ -149,10 +147,10 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     /**
      * 특정 매치의 채팅방 개수
      *
-     * @param match 매치
+     * @param matchId 매치 ID
      * @return 매치의 채팅방 개수
      */
-    @Query("SELECT COUNT(cr) FROM ChatRoom cr WHERE cr.match = :match")
-    long countByMatch(@Param("match") Match match);
+    @Query("SELECT COUNT(cr) FROM ChatRoom cr WHERE cr.matchId = :matchId")
+    long countByMatchId(@Param("matchId") Long matchId);
 
 }

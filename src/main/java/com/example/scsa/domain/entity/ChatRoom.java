@@ -15,7 +15,7 @@ import java.util.List;
  * 설계 참고:
  * - 하나의 매치에서 여러 채팅방 생성 가능 (호스트-게스트1, 호스트-게스트2, ...)
  * - user1, user2: 채팅방의 두 참여자 (순서 무관)
- * - match: 어느 매치에서 만났는지 기록 (선택적, nullable)
+ * - matchId: 어느 매치에서 만났는지 기록 (느슨한 결합)
  * - unique constraint: 같은 매치에서 같은 두 유저 간 채팅방 중복 방지
  * - CreatableEntity 상속으로 createdAt 자동 관리
  */
@@ -37,10 +37,9 @@ public class ChatRoom extends CreatableEntity {
     @Column(name = "chat_room_id")
     private Long id;
 
-    // 연관된 매치: 어느 매치에서 만났는지
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "match_id", nullable = false)
-    private Match match;
+    // 연관된 매치 ID: 어느 매치에서 만났는지 (느슨한 결합)
+    @Column(name = "match_id", nullable = false)
+    private Long matchId;
 
     // 채팅방 참여자 1: 보통 호스트 (순서는 중요하지 않음)
     @ManyToOne(fetch = FetchType.LAZY)
@@ -67,22 +66,15 @@ public class ChatRoom extends CreatableEntity {
     private String lastMessagePreview;
 
     // 생성자: 채팅방 생성 (매치 기반)
-    public ChatRoom(Match match, User user1, User user2) {
+    public ChatRoom(Long matchId, User user1, User user2) {
         validateUsers(user1, user2);
-        this.match = match;
+        if (matchId == null) {
+            throw new IllegalArgumentException("매치 ID는 필수입니다.");
+        }
+        this.matchId = matchId;
         this.user1 = user1;
         this.user2 = user2;
     }
-
-    /**
-     * // 생성자: 채팅방 생성 (매치 없이) -> 불가능
-     *     public ChatRoom(User user1, User user2) {
-     *         validateUsers(user1, user2);
-     *         this.match = null;
-     *         this.user1 = user1;
-     *         this.user2 = user2;
-     *     }
-     */
 
     // 유저 검증
     private void validateUsers(User user1, User user2) {
@@ -128,14 +120,6 @@ public class ChatRoom extends CreatableEntity {
     // 비즈니스 로직: 채팅방의 모든 참가자 조회
     public List<User> getParticipants() {
         return List.of(user1, user2);
-    }
-
-    // 비즈니스 로직: 매치의 호스트인지 확인 (match가 있는 경우에만)
-    public boolean isHost(User user) {
-        if (match == null) {
-            return false;
-        }
-        return match.getHost().equals(user);
     }
 
     // equals & hashCode: JPA에서 엔티티 동등성 비교를 위해 오버라이드

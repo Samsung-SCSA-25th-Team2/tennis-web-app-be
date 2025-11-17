@@ -118,6 +118,8 @@ public class AuthController {
     /**
      * 로그아웃 API
      * SecurityContext를 초기화 (클라이언트에서 localStorage의 토큰 삭제 필요)
+     * - 당장 api 호출은 필요없음
+     * - 블랙리스트를 redis에 올릴 때만, 로그아웃 API 필요
      *
      * @return 로그아웃 결과
      */

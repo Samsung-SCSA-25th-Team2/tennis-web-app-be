@@ -1,8 +1,10 @@
 package com.example.scsa.handler.auth;
 
 import com.example.scsa.dto.auth.CustomOAuth2User;
+import com.example.scsa.service.RefreshTokenService;
 import com.example.scsa.util.JwtUtil;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +21,7 @@ import java.io.IOException;
 public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
     private final JwtUtil jwtUtil;
+    private final RefreshTokenService refreshTokenService;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
@@ -32,19 +35,36 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         String role = "ROLE_USER";
 
         log.info("JWT 생성 시작 - UserId: {}, Role: {}", userId, role);
-        String token = jwtUtil.generateToken(userId, role);
-        log.info("JWT 생성 완료 - Token length: {}", token.length());
 
-        // JWT를 쿼리 파라미터로 전달 (프론트엔드에서 localStorage에 저장)
-        String targetUrl = determineTargetUrl(request, response, authentication, token);
+        // Access Token + Refresh Token 생성
+        String accessToken = jwtUtil.generateAccessToken(userId, role);
+        String refreshToken = jwtUtil.generateRefreshToken(userId);
+
+        log.info("Access Token 생성 완료 - Token length: {}", accessToken.length());
+        log.info("Refresh Token 생성 완료 - Token length: {}", refreshToken.length());
+
+        // Refresh Token을 Redis에 저장
+        refreshTokenService.saveRefreshToken(userId, refreshToken, jwtUtil.getRefreshTokenExpiration());
+
+        // Refresh Token을 httpOnly 쿠키로 설정
+        addRefreshTokenCookie(response, refreshToken);
+
+        // Access Token은 쿼리 파라미터로 전달 (프론트엔드에서 localStorage에 저장)
+        String targetUrl = "/index.html?accessToken=" + accessToken;
         log.info("리다이렉트 대상: {}", targetUrl);
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }
 
-    protected String determineTargetUrl(HttpServletRequest request, HttpServletResponse response,
-                                        Authentication authentication, String token) {
-        // 로그인 성공 후 메인 페이지로 리다이렉트하면서 JWT를 쿼리 파라미터로 전달
-        // 프론트엔드에서 토큰을 받아 localStorage에 저장
-        return "/index.html?token=" + token;
+    /**
+     * Refresh Token을 httpOnly 쿠키로 추가
+     */
+    private void addRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
+        Cookie cookie = new Cookie("refreshToken", refreshToken);
+        cookie.setHttpOnly(true);  // JavaScript에서 접근 불가 (XSS 방지)
+        cookie.setSecure(false);   // HTTPS only (배포 시 true로 변경)
+        cookie.setPath("/");
+        cookie.setMaxAge(7 * 24 * 60 * 60);  // 7일 (초 단위)
+        response.addCookie(cookie);
+        log.info("Refresh Token 쿠키 설정 완료");
     }
 }

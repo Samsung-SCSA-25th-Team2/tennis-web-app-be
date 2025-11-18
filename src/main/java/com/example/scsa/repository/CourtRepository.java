@@ -2,6 +2,7 @@ package com.example.scsa.repository;
 
 import com.example.scsa.domain.entity.Court;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -16,5 +17,5 @@ public interface CourtRepository extends JpaRepository<Court, Long> {
            where lower(c.courtName) like lower(concat('%', :keyword, '%'))
               or lower(c.location)  like lower(concat('%', :keyword, '%'))
            """)
-    List<Court> findByKeyword (String courtName, String location);
+    List<Court> findByKeyword (@Param("keyword") String keyword);
 }

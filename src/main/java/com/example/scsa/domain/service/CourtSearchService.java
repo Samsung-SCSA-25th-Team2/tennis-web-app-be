@@ -19,7 +19,7 @@ public class CourtSearchService {
 
     @Transactional(readOnly = true)
     public CourtSearchDTO searchByKeyword(String keyword){
-        List<Court> courts = courtRepository.findByKeyword(keyword, keyword);
+        List<Court> courts = courtRepository.findByKeyword(keyword);
 
         List<CourtDTO> items = courts.stream()
                 .map(court -> CourtDTO.builder()

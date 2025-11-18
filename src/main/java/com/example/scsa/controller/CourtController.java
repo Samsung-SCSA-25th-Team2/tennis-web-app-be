@@ -3,8 +3,8 @@ package com.example.scsa.controller;
 
 import com.example.scsa.service.court.CourtSearchService;
 import com.example.scsa.service.court.CourtService;
-import com.example.scsa.dto.CourtDTO;
-import com.example.scsa.dto.CourtSearchDTO;
+import com.example.scsa.dto.court.CourtDTO;
+import com.example.scsa.dto.court.CourtSearchDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

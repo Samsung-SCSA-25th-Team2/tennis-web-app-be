@@ -1,8 +1,8 @@
 package com.example.scsa.service.court;
 
 import com.example.scsa.domain.entity.Court;
-import com.example.scsa.dto.CourtDTO;
-import com.example.scsa.dto.CourtSearchDTO;
+import com.example.scsa.dto.court.CourtDTO;
+import com.example.scsa.dto.court.CourtSearchDTO;
 import com.example.scsa.repository.CourtRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;

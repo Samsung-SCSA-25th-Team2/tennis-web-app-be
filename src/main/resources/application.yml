@@ -7,7 +7,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
       default_batch_fetch_size: 100 # 쿼리 한번에 대한, row batch_size
     show-sql: true
     properties:
@@ -55,7 +55,7 @@ logging:
 
 jwt:
   secret: scsa-25th-team2-forever-jwt-secret-key-for-development-only-minimum-256-bits-required
-  expiration: 60000  # 1분 (1분 만료 테스트 -> 통과)
+  expiration: 600000  # 10분 (1분 만료 테스트 -> 통과)
 
 # SpringDoc OpenAPI (Swagger) 설정
 springdoc:

@@ -1,6 +1,8 @@
 package com.example.scsa.repository;
 
 import com.example.scsa.domain.entity.Court;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -17,5 +19,5 @@ public interface CourtRepository extends JpaRepository<Court, Long> {
            where lower(c.courtName) like lower(concat('%', :keyword, '%'))
               or lower(c.location)  like lower(concat('%', :keyword, '%'))
            """)
-    List<Court> findByKeyword (@Param("keyword") String keyword);
+    Slice<Court> findByKeyword (@Param("keyword") String keyword, Pageable pageable);
 }

@@ -35,9 +35,11 @@ public class CourtController {
      */
     @GetMapping("/search")
     public ResponseEntity<CourtSearchDTO> searchCourts(
-            @RequestParam("keyword") String keyword){
+            @RequestParam("keyword") String keyword,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size){
 
-        CourtSearchDTO result = courtSearchService.searchByKeyword(keyword);
+        CourtSearchDTO result = courtSearchService.searchByKeyword(keyword, page, size);
         return ResponseEntity.ok(result);
     }
 }

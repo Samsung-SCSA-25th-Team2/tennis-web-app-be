@@ -5,6 +5,9 @@ import com.example.scsa.dto.CourtDTO;
 import com.example.scsa.dto.CourtSearchDTO;
 import com.example.scsa.repository.CourtRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,10 +21,13 @@ public class CourtSearchService {
     private final CourtRepository courtRepository;
 
     @Transactional(readOnly = true)
-    public CourtSearchDTO searchByKeyword(String keyword){
-        List<Court> courts = courtRepository.findByKeyword(keyword);
+    public CourtSearchDTO searchByKeyword(String keyword, int page, int size){
 
-        List<CourtDTO> items = courts.stream()
+        Pageable pageable = PageRequest.of(page, size);
+
+        Slice<Court> slice = courtRepository.findByKeyword(keyword, pageable);
+
+        List<CourtDTO> items = slice.getContent().stream()
                 .map(court -> CourtDTO.builder()
                         .courtId(court.getId())
                         .thumbnail(court.getImgUrl())
@@ -34,6 +40,9 @@ public class CourtSearchService {
 
         return CourtSearchDTO.builder()
                 .courts(items)
+                .hasNext(slice.hasNext())
+                .page(slice.getNumber())
+                .size(slice.getSize())
                 .build();
     }
 }

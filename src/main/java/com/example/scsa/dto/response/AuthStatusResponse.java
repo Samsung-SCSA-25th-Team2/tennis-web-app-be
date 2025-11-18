@@ -45,6 +45,11 @@ public class AuthStatusResponse {
     private String imageUrl;
 
     /**
+     * 프로필 완성 여부 (nickname, gender, period, age 입력 완료)
+     */
+    private Boolean isProfileComplete;
+
+    /**
      * 응답 메시지
      */
     private String message;
@@ -69,7 +74,7 @@ public class AuthStatusResponse {
      * 인증된 사용자 응답 생성
      */
     public static AuthStatusResponse authenticated(Long userId, String provider, String providerId,
-                                                     String name, String imageUrl) {
+                                                     String name, String imageUrl, boolean isProfileComplete) {
         return AuthStatusResponse.builder()
                 .authenticated(true)
                 .userId(userId)
@@ -77,6 +82,7 @@ public class AuthStatusResponse {
                 .providerId(providerId)
                 .name(name)
                 .imageUrl(imageUrl)
+                .isProfileComplete(isProfileComplete)
                 .message("로그인 성공!")
                 .build();
     }

@@ -41,11 +41,6 @@ public class UserInfoResponse {
     private String imageUrl;
 
     /**
-     * 닉네임
-     */
-    private String nickname;
-
-    /**
      * User Entity로부터 DTO 생성
      */
     public static UserInfoResponse from(User user) {
@@ -55,7 +50,6 @@ public class UserInfoResponse {
                 .providerId(user.getProviderId())
                 .name(user.getName())
                 .imageUrl(user.getImgUrl())
-                .nickname(user.getNickname())
                 .build();
     }
 }

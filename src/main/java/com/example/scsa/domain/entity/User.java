@@ -20,7 +20,8 @@ public class User extends BaseTimeEntity {
     @Column(name = "user_id")
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    // OAuth2 로그인 직후에는 null, /complete-profile에서 입력
+    @Column(unique = true)
     private String nickname;
 
     @Enumerated(EnumType.STRING)
@@ -48,7 +49,10 @@ public class User extends BaseTimeEntity {
 
     @Builder
     public User(String nickname, Gender gender, Period period, Age age, String name, String imgUrl, Role role, String provider, String providerId) {
-        validateNickname(nickname);
+        // OAuth2 로그인 시에는 nickname이 null일 수 있음 (추후 /complete-profile에서 입력)
+        if (nickname != null) {
+            validateNickname(nickname);
+        }
         this.nickname = nickname;
         this.gender = gender;
         this.period = period;
@@ -110,6 +114,23 @@ public class User extends BaseTimeEntity {
     }
 
     public void updateAge(Age age) {
+        this.age = age;
+    }
+
+    // 비즈니스 로직: 프로필 완성 여부 확인
+    public boolean isProfileComplete() {
+        return this.nickname != null
+            && this.gender != null
+            && this.period != null
+            && this.age != null;
+    }
+
+    // 비즈니스 로직: 프로필 완성 (회원가입 폼 제출)
+    public void completeProfile(String nickname, Gender gender, Period period, Age age) {
+        validateNickname(nickname);
+        this.nickname = nickname;
+        this.gender = gender;
+        this.period = period;
         this.age = age;
     }
 

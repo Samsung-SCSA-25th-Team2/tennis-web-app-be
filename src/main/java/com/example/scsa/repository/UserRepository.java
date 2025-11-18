@@ -49,6 +49,19 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByNickname(String nickname);
 
     /**
+     * 닉네임 존재 여부 확인
+     *
+     * 사용 시나리오:
+     * - 프로필 수정 시 자신 이외의 닉네임 중복 체크
+     *
+     * @param nickname 닉네임
+     * @param id 자신의 회원 아이디
+     * @return 존재 여부 (true: 존재, false: 미존재)
+     */
+    boolean existsByNicknameAndIdNot(String nickname, Long id);
+
+
+    /**
      * OAuth2 Provider와 ProviderId로 유저 조회
      *
      * 사용 시나리오:

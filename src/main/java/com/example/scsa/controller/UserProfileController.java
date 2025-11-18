@@ -1,10 +1,17 @@
 package com.example.scsa.controller;
 
 
+import com.example.scsa.domain.entity.User;
+import com.example.scsa.dto.auth.CustomOAuth2User;
 import com.example.scsa.dto.profile.UserProfileDTO;
+import com.example.scsa.dto.profile.UserProfileUpdateRequestDTO;
+import com.example.scsa.dto.profile.UserProfileUpdateResponseDTO;
 import com.example.scsa.dto.request.ProfileCompleteRequest;
 import com.example.scsa.dto.response.ErrorResponse;
 import com.example.scsa.dto.response.ProfileCompleteResponse;
+import com.example.scsa.exception.UserNotFoundException;
+import com.example.scsa.repository.UserRepository;
+import com.example.scsa.service.CustomUserDetailsService;
 import com.example.scsa.service.UserService;
 import com.example.scsa.service.profile.UserProfileService;
 import jakarta.validation.Valid;
@@ -13,7 +20,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -25,6 +34,7 @@ import java.util.Map;
 @Slf4j
 public class UserProfileController {
 
+    private final UserRepository userRepository;
     private final UserProfileService userProfileService;
     private final UserService userService;
 
@@ -96,4 +106,25 @@ public class UserProfileController {
         return ResponseEntity.ok(result);
     }
 
+    /**
+     * 본인 프로필 정보 수정
+     * PATCH /api/v1/users/me/update
+     */
+    @PatchMapping("/me/update")
+    public ResponseEntity<UserProfileUpdateResponseDTO> updateUserProfile(
+            @AuthenticationPrincipal UserDetails currentUser,
+            @RequestBody UserProfileUpdateRequestDTO request) {
+
+        String username = currentUser.getUsername();
+        log.info("username: {}", username);
+
+        User user = userRepository.findByProviderId(username)
+                .orElseThrow(() -> new UserNotFoundException());
+
+        Long userId = user.getUserId();
+
+        UserProfileUpdateResponseDTO response = userProfileService.updateUserProfile(userId, request);
+
+        return ResponseEntity.ok(response);
+    }
 }

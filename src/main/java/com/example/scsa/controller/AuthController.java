@@ -6,9 +6,15 @@ import com.example.scsa.dto.response.AuthStatusResponse;
 import com.example.scsa.dto.response.ErrorResponse;
 import com.example.scsa.dto.response.LogoutResponse;
 import com.example.scsa.dto.response.ProfileCompleteResponse;
+import com.example.scsa.dto.response.TokenResponse;
 import com.example.scsa.dto.response.UserInfoResponse;
 import com.example.scsa.repository.UserRepository;
+import com.example.scsa.service.RefreshTokenService;
 import com.example.scsa.service.UserService;
+import com.example.scsa.util.JwtUtil;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +40,8 @@ public class AuthController {
 
     private final UserRepository userRepository;
     private final UserService userService;
+    private final JwtUtil jwtUtil;
+    private final RefreshTokenService refreshTokenService;
 
     /**
      * 인증 상태 조회 API
@@ -130,7 +138,8 @@ public class AuthController {
      * @return 프로필 완성 응답 (새 JWT 토큰 포함)
      */
     @PostMapping("/complete-profile")
-    public ResponseEntity<?> completeProfile(@Valid @RequestBody ProfileCompleteRequest request) {
+    public ResponseEntity<?> completeProfile(@Valid @RequestBody ProfileCompleteRequest request,
+                                              HttpServletResponse httpServletResponse) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null || !authentication.isAuthenticated()
@@ -142,6 +151,11 @@ public class AuthController {
         try {
             Long userId = Long.parseLong(authentication.getName());
             ProfileCompleteResponse response = userService.completeProfile(userId, request);
+
+            // Refresh Token을 httpOnly 쿠키로 설정
+            if (response.getRefreshToken() != null) {
+                addRefreshTokenCookie(httpServletResponse, response.getRefreshToken());
+            }
 
             log.info("프로필 완성 성공 - userId={}, nickname={}", userId, request.getNickname());
             return ResponseEntity.ok(response);
@@ -181,16 +195,86 @@ public class AuthController {
     }
 
     /**
+     * Refresh Token으로 Access Token 재발급 API
+     *
+     * @return 새로운 Access Token
+     */
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refresh(HttpServletRequest request) {
+        try {
+            // 쿠키에서 Refresh Token 가져오기
+            String refreshToken = getRefreshTokenFromCookie(request);
+
+            if (refreshToken == null) {
+                log.warn("Refresh Token이 쿠키에 없음");
+                return ResponseEntity.status(401)
+                        .body(ErrorResponse.of("Refresh Token이 없습니다.", "REFRESH_TOKEN_NOT_FOUND"));
+            }
+
+            // Refresh Token 유효성 검증
+            if (!jwtUtil.validateToken(refreshToken)) {
+                log.warn("유효하지 않은 Refresh Token");
+                return ResponseEntity.status(401)
+                        .body(ErrorResponse.of("유효하지 않은 Refresh Token입니다.", "INVALID_REFRESH_TOKEN"));
+            }
+
+            // Refresh Token에서 사용자 ID 추출
+            Long userId = jwtUtil.getUserIdFromToken(refreshToken);
+
+            // Redis에 저장된 Refresh Token과 비교
+            if (!refreshTokenService.validateRefreshToken(userId, refreshToken)) {
+                log.warn("Redis에 저장된 Refresh Token과 일치하지 않음 - userId: {}", userId);
+                return ResponseEntity.status(401)
+                        .body(ErrorResponse.of("Refresh Token이 일치하지 않습니다.", "REFRESH_TOKEN_MISMATCH"));
+            }
+
+            // 사용자 조회
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+            // 새로운 Access Token 발급
+            String newAccessToken = jwtUtil.generateAccessToken(userId, user.getRole().name());
+
+            log.info("Access Token 재발급 성공 - userId: {}", userId);
+            return ResponseEntity.ok(TokenResponse.of(newAccessToken, null, jwtUtil.getAccessTokenExpiration()));
+
+        } catch (Exception e) {
+            log.error("Access Token 재발급 실패: {}", e.getMessage());
+            return ResponseEntity.status(500)
+                    .body(ErrorResponse.of("서버 오류가 발생했습니다.", "INTERNAL_SERVER_ERROR"));
+        }
+    }
+
+    /**
      * 로그아웃 API
-     * SecurityContext를 초기화 (클라이언트에서 localStorage의 토큰 삭제 필요)
-     * - 당장 api 호출은 필요없음
-     * - 블랙리스트를 redis에 올릴 때만, 로그아웃 API 필요
+     * Refresh Token 삭제 및 SecurityContext 초기화
      *
      * @return 로그아웃 결과
      */
     @PostMapping("/logout")
-    public ResponseEntity<LogoutResponse> logout() {
+    public ResponseEntity<LogoutResponse> logout(HttpServletRequest request, HttpServletResponse response) {
         try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+            // 인증된 사용자인 경우 Refresh Token 삭제
+            if (authentication != null && authentication.isAuthenticated()
+                    && !(authentication instanceof AnonymousAuthenticationToken)) {
+                try {
+                    Long userId = Long.parseLong(authentication.getName());
+                    refreshTokenService.deleteRefreshToken(userId);
+                    log.info("Redis에서 Refresh Token 삭제 완료 - userId: {}", userId);
+                } catch (Exception e) {
+                    log.warn("Refresh Token 삭제 중 오류 발생: {}", e.getMessage());
+                }
+            }
+
+            // Refresh Token 쿠키 삭제
+            Cookie cookie = new Cookie("refreshToken", null);
+            cookie.setHttpOnly(true);
+            cookie.setPath("/");
+            cookie.setMaxAge(0);  // 즉시 삭제
+            response.addCookie(cookie);
+
             // SecurityContext 초기화
             SecurityContextHolder.clearContext();
 
@@ -201,5 +285,33 @@ public class AuthController {
             return ResponseEntity.status(500)
                     .body(LogoutResponse.failure(e.getMessage()));
         }
+    }
+
+    /**
+     * Refresh Token을 httpOnly 쿠키로 추가
+     */
+    private void addRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
+        Cookie cookie = new Cookie("refreshToken", refreshToken);
+        cookie.setHttpOnly(true);  // JavaScript에서 접근 불가 (XSS 방지)
+        cookie.setSecure(false);   // HTTPS only (배포 시 true로 변경)
+        cookie.setPath("/");
+        cookie.setMaxAge(7 * 24 * 60 * 60);  // 7일 (초 단위)
+        response.addCookie(cookie);
+        log.info("Refresh Token 쿠키 설정 완료");
+    }
+
+    /**
+     * 쿠키에서 Refresh Token 가져오기
+     */
+    private String getRefreshTokenFromCookie(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("refreshToken".equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        return null;
     }
 }

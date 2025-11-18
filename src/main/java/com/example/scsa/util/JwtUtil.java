@@ -16,24 +16,56 @@ import java.util.Date;
 public class JwtUtil {
 
     private final SecretKey secretKey;
-    private final long expirationTime;
+    private final long accessTokenExpiration;
+    private final long refreshTokenExpiration;
 
-    public JwtUtil(@Value("${jwt.secret}") String secret, @Value("${jwt.expiration}") long expiration) {
+    public JwtUtil(@Value("${jwt.secret}") String secret,
+                   @Value("${jwt.access-token-expiration}") long accessExpiration,
+                   @Value("${jwt.refresh-token-expiration}") long refreshExpiration) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        this.expirationTime = expiration;
+        this.accessTokenExpiration = accessExpiration;
+        this.refreshTokenExpiration = refreshExpiration;
     }
 
-    public String generateToken(Long userId, String role) {
+    /**
+     * Access Token 생성
+     */
+    public String generateAccessToken(Long userId, String role) {
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + expirationTime);
+        Date expiryDate = new Date(now.getTime() + accessTokenExpiration);
 
         return Jwts.builder()
                 .setSubject(userId.toString())
                 .claim("role", role)
+                .claim("type", "access")
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
-                .signWith(secretKey)  // 알고리즘 자동 선택 (HS256)
+                .signWith(secretKey)
                 .compact();
+    }
+
+    /**
+     * Refresh Token 생성
+     */
+    public String generateRefreshToken(Long userId) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + refreshTokenExpiration);
+
+        return Jwts.builder()
+                .setSubject(userId.toString())
+                .claim("type", "refresh")
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(secretKey)
+                .compact();
+    }
+
+    /**
+     * @deprecated Use generateAccessToken instead
+     */
+    @Deprecated
+    public String generateToken(Long userId, String role) {
+        return generateAccessToken(userId, role);
     }
 
     public Claims getClaims(String token) {
@@ -67,5 +99,26 @@ public class JwtUtil {
 
     public Long getUserIdFromToken(String token) {
         return Long.parseLong(getClaims(token).getSubject());
+    }
+
+    /**
+     * 토큰 타입 확인 (access or refresh)
+     */
+    public String getTokenType(String token) {
+        return getClaims(token).get("type", String.class);
+    }
+
+    /**
+     * Access Token 만료 시간 조회
+     */
+    public long getAccessTokenExpiration() {
+        return accessTokenExpiration;
+    }
+
+    /**
+     * Refresh Token 만료 시간 조회
+     */
+    public long getRefreshTokenExpiration() {
+        return refreshTokenExpiration;
     }
 }

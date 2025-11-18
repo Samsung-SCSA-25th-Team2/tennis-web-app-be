@@ -48,7 +48,7 @@ spring:
     password: guest
 
 server:
-  port: 8888
+  port: 8080
 
 logging:
   level:
@@ -61,7 +61,13 @@ logging:
 
 jwt:
   secret: scsa-25th-team2-forever-jwt-secret-key-for-development-only-minimum-256-bits-required
-  expiration: 600000  # 10분 (1분 만료 테스트 -> 통과)
+  access-token-expiration: 600000  # 10분 (Access Token)
+  refresh-token-expiration: 604800000  # 7일 (Refresh Token)
+
+redis:
+  host: redis-14621.c340.ap-northeast-2-1.ec2.cloud.redislabs.com
+  port: 14621
+  password: "azycRtr20NyWTwdpkjZ0tFRNNbnYeh0c"
 
 # SpringDoc OpenAPI (Swagger) 설정
 springdoc:

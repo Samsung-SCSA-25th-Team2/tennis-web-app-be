@@ -1,8 +1,8 @@
-package com.example.scsa.domain.service;
+package com.example.scsa.service.court;
 
 import com.example.scsa.dto.CourtDTO;
 import com.example.scsa.domain.entity.Court;
-import com.example.scsa.domain.exception.CourtNotFoundException;
+import com.example.scsa.exception.CourtNotFoundException;
 import com.example.scsa.repository.CourtRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

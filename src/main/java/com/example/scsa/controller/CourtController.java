@@ -1,8 +1,8 @@
 package com.example.scsa.controller;
 
 
-import com.example.scsa.domain.service.CourtSearchService;
-import com.example.scsa.domain.service.CourtService;
+import com.example.scsa.service.court.CourtSearchService;
+import com.example.scsa.service.court.CourtService;
 import com.example.scsa.dto.CourtDTO;
 import com.example.scsa.dto.CourtSearchDTO;
 import lombok.RequiredArgsConstructor;

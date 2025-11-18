@@ -1,4 +1,4 @@
-package com.example.scsa.domain.exception;
+package com.example.scsa.exception;
 
 public class MatchNotFoundException extends RuntimeException {
     public MatchNotFoundException(Long id) {

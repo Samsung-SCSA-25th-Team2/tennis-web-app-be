@@ -1,4 +1,4 @@
-package com.example.scsa.domain.exception;
+package com.example.scsa.exception;
 
 public class CourtNotFoundException extends RuntimeException {
     public CourtNotFoundException(Long courtId) {

@@ -1,4 +1,4 @@
-package com.example.scsa.domain.service;
+package com.example.scsa.service.court;
 
 import com.example.scsa.domain.entity.Court;
 import com.example.scsa.dto.CourtDTO;

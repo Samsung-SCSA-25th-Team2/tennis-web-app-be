@@ -91,41 +91,19 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     /**
      * 신규 사용자 생성
-     * 주의: gender, period, age는 나중에 추가 정보 입력 페이지에서 받아야 함
+     * 주의: nickname, gender, period, age는 나중에 추가 정보 입력 페이지(/complete-profile)에서 받아야 함
      */
     private User createNewUser(OAuth2UserInfo oauth2UserInfo) {
         log.info("신규 사용자 생성 - Provider: {}, ProviderId: {}",
                 oauth2UserInfo.getProvider(),
                 oauth2UserInfo.getProviderId());
 
-        // 닉네임 중복 체크 및 생성
-        String nickname = generateUniqueNickname(oauth2UserInfo.getName());
-
-        return User.builder()
-                .provider(oauth2UserInfo.getProvider())
-                .providerId(oauth2UserInfo.getProviderId())
-                .name(oauth2UserInfo.getName())
-                .imgUrl(oauth2UserInfo.getImageUrl())
-                .nickname(nickname)
-                // gender, period, age는 null로 설정 (추후 입력 필요)
-                .build();
-    }
-
-    /**
-     * 중복되지 않는 닉네임 생성
-     */
-    private String generateUniqueNickname(String baseName) {
-        if (baseName == null || baseName.trim().isEmpty()) {
-            baseName = "사용자";
-        }
-
-        String nickname = baseName;
-        int suffix = 1;
-
-        while (userRepository.existsByNickname(nickname)) {
-            nickname = baseName + suffix++;
-        }
-
-        return nickname;
+        // User.createOAuth2User 팩토리 메서드 사용 (nickname, gender, period, age는 null)
+        return User.createOAuth2User(
+                oauth2UserInfo.getProvider(),
+                oauth2UserInfo.getProviderId(),
+                oauth2UserInfo.getName(),
+                oauth2UserInfo.getImageUrl()
+        );
     }
 }

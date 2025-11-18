@@ -216,7 +216,7 @@
 <body>
     <div class="container">
         <h1>카카오 로그인 + JWT 테스트</h1>
-        <p class="subtitle">Spring Security OAuth2 + JWT 인증 테스트 페이지</p>
+        <p class="subtitle">Spring Security OAuth2 + JWT (Access Token + Refresh Token) 테스트 페이지</p>
 
         <!-- 로그인 전 화면 -->
         <div id="loginSection">
@@ -246,10 +246,14 @@
                 <button class="btn btn-primary" onclick="fetchUserMe()">
                     사용자 정보 조회
                 </button>
-                <button class="btn btn-secondary" onclick="checkJwtCookie()">
-                    JWT 토큰 확인
+                <button class="btn btn-secondary" onclick="checkTokens()">
+                    토큰 상태 확인
                 </button>
             </div>
+
+            <button class="btn btn-primary" onclick="refreshAccessToken()">
+                Access Token 재발급
+            </button>
 
             <button class="btn btn-danger" onclick="logout()">
                 로그아웃
@@ -274,7 +278,7 @@
 
     <script>
         // JWT 토큰 관리 (localStorage 사용)
-        const TOKEN_KEY = 'jwt_token';
+        const TOKEN_KEY = 'accessToken';
 
         // 페이지 로드 시 처리
         window.addEventListener('DOMContentLoaded', () => {
@@ -282,12 +286,12 @@
 
             // URL에서 토큰 추출 (OAuth2 로그인 성공 후)
             const urlParams = new URLSearchParams(window.location.search);
-            const token = urlParams.get('token');
+            const accessToken = urlParams.get('accessToken');
 
-            if (token) {
-                console.log('URL에서 JWT 토큰 받음');
-                // localStorage에 토큰 저장
-                localStorage.setItem(TOKEN_KEY, token);
+            if (accessToken) {
+                console.log('URL에서 Access Token 받음');
+                // localStorage에 Access Token 저장
+                localStorage.setItem(TOKEN_KEY, accessToken);
                 // URL에서 토큰 파라미터 제거
                 window.history.replaceState({}, document.title, '/index.html');
             }
@@ -408,38 +412,101 @@
             }
         }
 
-        // JWT 토큰 확인
-        function checkJwtCookie() {
-            const token = getToken();
+        // 토큰 상태 확인
+        function checkTokens() {
+            const accessToken = getToken();
+            const result = {
+                accessToken: null,
+                refreshToken: {
+                    message: 'Refresh Token은 httpOnly 쿠키에 저장되어 JavaScript로 접근할 수 없습니다.',
+                    note: '서버에서 자동으로 관리되며, /api/v1/auth/refresh 엔드포인트 호출 시 자동으로 전송됩니다.'
+                }
+            };
 
-            if (token) {
-                // JWT 디코딩 (payload 부분만)
+            if (accessToken) {
                 try {
-                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    const payload = JSON.parse(atob(accessToken.split('.')[1]));
                     const expiresAt = new Date(payload.exp * 1000);
+                    const now = new Date();
+                    const isExpired = now > expiresAt;
+                    const timeRemaining = Math.max(0, Math.floor((expiresAt - now) / 1000));
 
-                    showApiResponse({
-                        message: 'JWT 토큰이 localStorage에 존재합니다',
+                    result.accessToken = {
+                        status: isExpired ? '만료됨' : '유효함',
                         storage: 'localStorage',
-                        tokenLength: token.length,
-                        tokenPreview: token.substring(0, 50) + '...',
+                        tokenLength: accessToken.length,
+                        tokenPreview: accessToken.substring(0, 50) + '...',
                         payload: payload,
                         expiresAt: expiresAt.toLocaleString('ko-KR'),
-                        note: '토큰은 localStorage에 저장되어 있으며, 모든 API 요청 시 Authorization: Bearer <token> 헤더로 전송됩니다.'
-                    }, true);
+                        timeRemaining: `${Math.floor(timeRemaining / 60)}분 ${timeRemaining % 60}초`,
+                        isExpired: isExpired
+                    };
+
+                    showApiResponse(result, !isExpired);
                 } catch (e) {
-                    showApiResponse({
-                        message: 'JWT 토큰이 존재하지만 디코딩 실패',
-                        error: e.message,
-                        tokenLength: token.length
-                    }, false);
+                    result.accessToken = {
+                        error: 'Access Token 디코딩 실패',
+                        message: e.message
+                    };
+                    showApiResponse(result, false);
                 }
             } else {
-                showApiResponse({
-                    message: 'JWT 토큰을 찾을 수 없습니다',
-                    storage: 'localStorage',
+                result.accessToken = {
+                    message: 'Access Token을 찾을 수 없습니다',
                     note: '로그인 후 토큰이 자동으로 저장됩니다.'
+                };
+                showApiResponse(result, false);
+            }
+        }
+
+        // Access Token 재발급
+        async function refreshAccessToken() {
+            try {
+                showLoading(true);
+                console.log('Access Token 재발급 요청 시작');
+
+                const response = await fetch('/api/v1/auth/refresh', {
+                    method: 'POST',
+                    credentials: 'include',  // 쿠키 포함
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.accessToken) {
+                    // 새로운 Access Token을 localStorage에 저장
+                    localStorage.setItem(TOKEN_KEY, data.accessToken);
+                    console.log('새로운 Access Token 저장 완료');
+
+                    showApiResponse({
+                        message: 'Access Token 재발급 성공',
+                        newAccessToken: {
+                            tokenLength: data.accessToken.length,
+                            tokenPreview: data.accessToken.substring(0, 50) + '...',
+                            expiresIn: `${data.expiresIn}초`,
+                            tokenType: data.tokenType
+                        },
+                        note: '새로운 Access Token이 localStorage에 저장되었습니다.'
+                    }, true);
+                } else {
+                    console.error('토큰 재발급 실패:', data);
+                    showApiResponse({
+                        message: 'Access Token 재발급 실패',
+                        error: data.message || data.errorCode || 'Unknown error',
+                        statusCode: response.status,
+                        note: 'Refresh Token이 만료되었거나 유효하지 않을 수 있습니다. 다시 로그인해주세요.'
+                    }, false);
+                }
+            } catch (error) {
+                console.error('토큰 재발급 요청 실패:', error);
+                showApiResponse({
+                    message: '토큰 재발급 요청 실패',
+                    error: error.message
                 }, false);
+            } finally {
+                showLoading(false);
             }
         }
 

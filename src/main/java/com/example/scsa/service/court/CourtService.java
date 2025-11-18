@@ -1,6 +1,6 @@
 package com.example.scsa.service.court;
 
-import com.example.scsa.dto.CourtDTO;
+import com.example.scsa.dto.court.CourtDTO;
 import com.example.scsa.domain.entity.Court;
 import com.example.scsa.exception.CourtNotFoundException;
 import com.example.scsa.repository.CourtRepository;

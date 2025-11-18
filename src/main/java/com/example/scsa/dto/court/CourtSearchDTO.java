@@ -1,4 +1,4 @@
-package com.example.scsa.dto;
+package com.example.scsa.dto.court;
 
 import lombok.Builder;
 import lombok.Getter;

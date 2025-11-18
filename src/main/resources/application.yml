@@ -48,7 +48,7 @@ spring:
     password: guest
 
 server:
-  port: 8888
+  port: 8080
 
 logging:
   level:

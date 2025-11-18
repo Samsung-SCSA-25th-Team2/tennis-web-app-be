@@ -1,17 +1,12 @@
 package com.example.scsa.controller;
 
 
-import com.example.scsa.domain.entity.User;
-import com.example.scsa.dto.auth.CustomOAuth2User;
 import com.example.scsa.dto.profile.UserProfileDTO;
-import com.example.scsa.dto.profile.UserProfileUpdateRequestDTO;
-import com.example.scsa.dto.profile.UserProfileUpdateResponseDTO;
 import com.example.scsa.dto.request.ProfileCompleteRequest;
 import com.example.scsa.dto.response.ErrorResponse;
 import com.example.scsa.dto.response.ProfileCompleteResponse;
 import com.example.scsa.exception.UserNotFoundException;
 import com.example.scsa.repository.UserRepository;
-import com.example.scsa.service.CustomUserDetailsService;
 import com.example.scsa.service.UserService;
 import com.example.scsa.service.profile.UserProfileService;
 import jakarta.validation.Valid;
@@ -20,9 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -111,20 +104,40 @@ public class UserProfileController {
      * PATCH /api/v1/users/me/update
      */
     @PatchMapping("/me/update")
-    public ResponseEntity<UserProfileUpdateResponseDTO> updateUserProfile(
-            @AuthenticationPrincipal UserDetails currentUser,
-            @RequestBody UserProfileUpdateRequestDTO request) {
+    public ResponseEntity<?> updateUserProfile(
+            @RequestBody UserProfileDTO request) {
 
-        String username = currentUser.getUsername();
-        log.info("username: {}", username);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        User user = userRepository.findByProviderId(username)
-                .orElseThrow(() -> new UserNotFoundException());
+        if (authentication == null || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
+            return ResponseEntity.status(401)
+                    .body(ErrorResponse.of("인증되지 않은 사용자입니다.", "UNAUTHORIZED"));
+        }
 
-        Long userId = user.getUserId();
+        try {
+            Long userId = Long.parseLong(authentication.getName());
+            log.info("프로필 수정 요청 - userId: {}", userId);
 
-        UserProfileUpdateResponseDTO response = userProfileService.updateUserProfile(userId, request);
+            UserProfileDTO response = userProfileService.updateUserProfile(userId, request);
 
-        return ResponseEntity.ok(response);
+            log.info("프로필 수정 성공 - userId: {}", userId);
+            return ResponseEntity.ok(response);
+
+        } catch (NumberFormatException e) {
+            log.error("잘못된 사용자 ID 형식: {}", authentication.getName());
+            return ResponseEntity.status(400)
+                    .body(ErrorResponse.of("잘못된 사용자 ID입니다.", "INVALID_USER_ID"));
+
+        } catch (UserNotFoundException e) {
+            log.warn("프로필 수정 실패 - 사용자를 찾을 수 없음");
+            return ResponseEntity.status(404)
+                    .body(ErrorResponse.of(e.getMessage(), "USER_NOT_FOUND"));
+
+        } catch (Exception e) {
+            log.error("프로필 수정 실패 - 서버 오류: {}", e.getMessage());
+            return ResponseEntity.status(500)
+                    .body(ErrorResponse.of("서버 오류가 발생했습니다.", "INTERNAL_SERVER_ERROR"));
+        }
     }
 }

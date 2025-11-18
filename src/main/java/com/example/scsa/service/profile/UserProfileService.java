@@ -5,16 +5,12 @@ import com.example.scsa.domain.vo.Age;
 import com.example.scsa.domain.vo.Gender;
 import com.example.scsa.domain.vo.Period;
 import com.example.scsa.dto.profile.UserProfileDTO;
-import com.example.scsa.dto.profile.UserProfileUpdateRequestDTO;
-import com.example.scsa.dto.profile.UserProfileUpdateResponseDTO;
 import com.example.scsa.exception.InvalidProfileUpdateException;
 import com.example.scsa.exception.UserNotFoundException;
 import com.example.scsa.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -37,7 +33,7 @@ public class UserProfileService {
     }
 
     @Transactional
-    public UserProfileUpdateResponseDTO updateUserProfile(Long userId, UserProfileUpdateRequestDTO dto){
+    public UserProfileDTO updateUserProfile(Long userId, UserProfileDTO dto){
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException());
@@ -68,7 +64,7 @@ public class UserProfileService {
             user.updateAge(Age.valueOf(dto.getAge()));
         }
 
-        return UserProfileUpdateResponseDTO.builder()
+        return UserProfileDTO.builder()
                 .nickname(user.getNickname())
                 .period(user.getPeriod().toString())
                 .gender(user.getGender().toString())

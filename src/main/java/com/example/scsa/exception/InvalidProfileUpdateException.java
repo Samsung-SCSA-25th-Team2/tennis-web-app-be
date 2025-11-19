@@ -1,16 +1,15 @@
 package com.example.scsa.exception;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.ResponseStatus;
-
-@ResponseStatus(HttpStatus.BAD_REQUEST)
+/**
+ * 잘못된 프로필 수정 요청 시 발생하는 예외
+ */
 public class InvalidProfileUpdateException extends RuntimeException {
+
+    public InvalidProfileUpdateException() {
+        super(ErrorCode.INVALID_PROFILE_UPDATE.getMessage());
+    }
 
     public InvalidProfileUpdateException(String message) {
         super(message);
-    }
-
-    public InvalidProfileUpdateException() {
-        super("잘못된 프로필 수정 요청입니다.");
     }
 }

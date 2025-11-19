@@ -1,0 +1,49 @@
+# 테스트 환경 설정
+spring:
+  main:
+    allow-bean-definition-overriding: true  # 테스트에서 Bean override 허용
+
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+
+  sql:
+    init:
+      mode: never
+
+# 환경 변수 (테스트용 더미 값)
+KAKAO_CLIENT_ID: "test-client-id"
+KAKAO_CLIENT_SECRET: "test-client-secret"
+OAUTH2_REDIRECT_URI: "http://localhost:8080/login/oauth2/code/kakao"
+
+JWT_SECRET: "test-jwt-secret-key-for-testing-only-minimum-256-bits-required-here"
+JWT_ACCESS_EXPIRATION: 600000
+JWT_REFRESH_EXPIRATION: 604800000
+
+REDIS_HOST: "localhost"
+REDIS_PORT: 6379
+REDIS_PASSWORD: ""
+
+CORS_ALLOWED_ORIGINS: "http://localhost:3000"
+FRONTEND_URL: "http://localhost:3000"
+
+# 쿠키 설정 (테스트용)
+COOKIE_SECURE: false
+COOKIE_SAME_SITE: "Lax"
+COOKIE_DOMAIN: ""
+
+# 로깅
+LOG_LEVEL_WEB: INFO
+LOG_LEVEL_SECURITY: INFO
+LOG_LEVEL_JPA: INFO
+LOG_LEVEL_APP: INFO

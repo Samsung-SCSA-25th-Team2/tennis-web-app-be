@@ -13,7 +13,7 @@ spring:
     password: 12345678
     driver-class-name: com.mysql.cj.jdbc.Driver
 
-# JPA & SQL
+# JPA & SQL000
 DDL_AUTO: update
 SHOW_SQL: true
 SQL_INIT_MODE: never # 로컬에서는 ddl-auto: update 사용하므로 스크립트 실행 안 함
@@ -42,8 +42,9 @@ LOG_LEVEL_APP: DEBUG
 # CORS
 CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5173,http://127.0.0.1:5500"
 
-# Frontend URL
-FRONTEND_URL: "http://localhost:5173"
+# Frontend URL (임시로 백엔드 URL 사용 - 테스트용)
+### 동훈이형 여기서 5173으로 바꿔서 테스트 해주세여 ###
+FRONTEND_URL: "http://localhost:8080"
 
 # Cookie
 COOKIE_SECURE: false

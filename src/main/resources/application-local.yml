@@ -1,0 +1,51 @@
+# local 환경 설정 (개발용)
+
+# --- application-common.yml의 환경 변수 값 설정 ---
+
+# Server
+SERVER_PORT: 8080
+
+# Database (로컬 개발 시 사용할 DB)
+spring:
+  datasource:
+    url: jdbc:mysql://db-tennis-web-app.cnqkisgwa8vz.ap-northeast-2.rds.amazonaws.com:3306/db-tennis-web-app?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8
+    username: admin
+    password: 12345678
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+# JPA & SQL
+DDL_AUTO: update
+SHOW_SQL: true
+SQL_INIT_MODE: never # 로컬에서는 ddl-auto: update 사용하므로 스크립트 실행 안 함
+
+# Kakao OAuth2
+KAKAO_CLIENT_ID: "a5684086cef2a24799efaf9268549f00"
+KAKAO_CLIENT_SECRET: "Gt5Qf0HaRcS5FlIgvUs5niSc4pdEWbBq"
+OAUTH2_REDIRECT_URI: "{baseUrl}/login/oauth2/code/kakao"
+
+# JWT
+JWT_SECRET: "scsa-25th-team2-forever-jwt-secret-key-for-development-only-minimum-256-bits-required"
+JWT_ACCESS_EXPIRATION: 600000      # 10분
+JWT_REFRESH_EXPIRATION: 604800000 # 7일
+
+# Redis
+REDIS_HOST: "redis-14621.c340.ap-northeast-2-1.ec2.cloud.redislabs.com"
+REDIS_PORT: 14621
+REDIS_PASSWORD: "azycRtr20NyWTwdpkjZ0tFRNNbnYeh0c"
+
+# Logging Level
+LOG_LEVEL_WEB: DEBUG
+LOG_LEVEL_SECURITY: DEBUG
+LOG_LEVEL_JPA: DEBUG
+LOG_LEVEL_APP: DEBUG
+
+# CORS
+CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5173,http://127.0.0.1:5500"
+
+# Frontend URL
+FRONTEND_URL: "http://localhost:5173"
+
+# Cookie
+COOKIE_SECURE: false
+COOKIE_SAME_SITE: Lax
+COOKIE_DOMAIN: ""

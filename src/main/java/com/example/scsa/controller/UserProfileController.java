@@ -9,6 +9,13 @@ import com.example.scsa.exception.UserNotFoundException;
 import com.example.scsa.repository.UserRepository;
 import com.example.scsa.service.UserService;
 import com.example.scsa.service.profile.UserProfileService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +32,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/users")
 @Slf4j
+@Tag(name = "사용자 프로필 API", description = "사용자 프로필 조회 및 수정 관련 API")
 public class UserProfileController {
 
     private final UserRepository userRepository;
@@ -38,6 +46,19 @@ public class UserProfileController {
      * @param request 프로필 완성 요청
      * @return 프로필 완성 응답 (새 JWT 토큰 포함)
      */
+    @Operation(summary = "프로필 완성", description = "OAuth2 로그인 후 추가 정보(닉네임, 성별, 경력, 나이)를 입력하여 프로필을 완성합니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "프로필 완성 성공",
+            content = @Content(schema = @Schema(implementation = ProfileCompleteResponse.class))),
+        @ApiResponse(responseCode = "400", description = "잘못된 요청",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+        @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+        @ApiResponse(responseCode = "409", description = "이미 프로필이 완성된 사용자",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+        @ApiResponse(responseCode = "500", description = "서버 오류",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @PostMapping("/complete-profile")
     public ResponseEntity<?> completeProfile(@Valid @RequestBody ProfileCompleteRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -78,8 +99,13 @@ public class UserProfileController {
      * @param nickname 확인할 닉네임
      * @return 사용 가능 여부
      */
+    @Operation(summary = "닉네임 중복 체크", description = "입력한 닉네임의 사용 가능 여부를 확인합니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "조회 성공 (available: true=사용가능, false=중복)")
+    })
     @GetMapping("/check-nickname")
-    public ResponseEntity<Map<String, Boolean>> checkNickname(@RequestParam String nickname) {
+    public ResponseEntity<Map<String, Boolean>> checkNickname(
+            @Parameter(description = "확인할 닉네임", required = true) @RequestParam String nickname) {
         boolean available = userService.isNicknameAvailable(nickname);
 
         Map<String, Boolean> response = new HashMap<>();
@@ -92,9 +118,14 @@ public class UserProfileController {
      * user_id로 특정 유저의 프로필 정보 조회
      * GET /api/v1/users/{user_id}
      */
+    @Operation(summary = "사용자 프로필 조회", description = "사용자 ID로 특정 사용자의 프로필 정보를 조회합니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "조회 성공",
+            content = @Content(schema = @Schema(implementation = UserProfileDTO.class)))
+    })
     @GetMapping("/{user_id}")
     public ResponseEntity<UserProfileDTO> getUserProfile(
-            @PathVariable("user_id") Long userId) {
+            @Parameter(description = "사용자 ID", required = true) @PathVariable("user_id") Long userId) {
         UserProfileDTO result = userProfileService.getUserProfile(userId);
         return ResponseEntity.ok(result);
     }
@@ -103,6 +134,19 @@ public class UserProfileController {
      * 본인 프로필 정보 수정
      * PATCH /api/v1/users/me/update
      */
+    @Operation(summary = "프로필 수정", description = "로그인한 사용자의 프로필 정보를 수정합니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "수정 성공",
+            content = @Content(schema = @Schema(implementation = UserProfileDTO.class))),
+        @ApiResponse(responseCode = "400", description = "잘못된 사용자 ID",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+        @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+        @ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+        @ApiResponse(responseCode = "500", description = "서버 오류",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @PatchMapping("/me/update")
     public ResponseEntity<?> updateUserProfile(
             @RequestBody UserProfileDTO request) {

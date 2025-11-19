@@ -12,6 +12,13 @@ import com.example.scsa.repository.UserRepository;
 import com.example.scsa.service.RefreshTokenService;
 import com.example.scsa.service.UserService;
 import com.example.scsa.util.JwtUtil;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -36,6 +43,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
+@Tag(name = "인증 API", description = "JWT 기반 인증, 로그인, 로그아웃, 토큰 관리 관련 API")
 public class AuthController {
 
     private final UserRepository userRepository;
@@ -48,6 +56,11 @@ public class AuthController {
      *
      * @return 인증 상태 정보
      */
+    @Operation(summary = "인증 상태 조회", description = "현재 사용자의 인증 상태 및 프로필 완성 여부를 확인합니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "조회 성공",
+            content = @Content(schema = @Schema(implementation = AuthStatusResponse.class)))
+    })
     @GetMapping("/status")
     public ResponseEntity<AuthStatusResponse> getAuthStatus() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -103,6 +116,15 @@ public class AuthController {
      *
      * @return 사용자 정보
      */
+    @Operation(summary = "현재 사용자 정보 조회", description = "로그인한 사용자의 상세 정보를 조회합니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "조회 성공",
+            content = @Content(schema = @Schema(implementation = UserInfoResponse.class))),
+        @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+        @ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -137,6 +159,19 @@ public class AuthController {
      * @param request 프로필 완성 요청
      * @return 프로필 완성 응답 (새 JWT 토큰 포함)
      */
+    @Operation(summary = "프로필 완성", description = "OAuth2 로그인 후 추가 정보(닉네임, 성별, 경력, 나이)를 입력하여 프로필을 완성합니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "프로필 완성 성공",
+            content = @Content(schema = @Schema(implementation = ProfileCompleteResponse.class))),
+        @ApiResponse(responseCode = "400", description = "잘못된 요청",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+        @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+        @ApiResponse(responseCode = "409", description = "이미 프로필이 완성된 사용자",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+        @ApiResponse(responseCode = "500", description = "서버 오류",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @PostMapping("/complete-profile")
     public ResponseEntity<?> completeProfile(@Valid @RequestBody ProfileCompleteRequest request,
                                               HttpServletResponse httpServletResponse) {
@@ -183,8 +218,13 @@ public class AuthController {
      * @param nickname 확인할 닉네임
      * @return 사용 가능 여부
      */
+    @Operation(summary = "닉네임 중복 체크", description = "입력한 닉네임의 사용 가능 여부를 확인합니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "조회 성공 (available: true=사용가능, false=중복)")
+    })
     @GetMapping("/check-nickname")
-    public ResponseEntity<Map<String, Boolean>> checkNickname(@RequestParam String nickname) {
+    public ResponseEntity<Map<String, Boolean>> checkNickname(
+            @Parameter(description = "확인할 닉네임", required = true) @RequestParam String nickname) {
         boolean available = userService.isNicknameAvailable(nickname);
 
         Map<String, Boolean> response = new HashMap<>();
@@ -199,6 +239,15 @@ public class AuthController {
      *
      * @return 새로운 Access Token
      */
+    @Operation(summary = "Access Token 재발급", description = "쿠키에 저장된 Refresh Token을 사용하여 새로운 Access Token을 발급받습니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "토큰 재발급 성공",
+            content = @Content(schema = @Schema(implementation = TokenResponse.class))),
+        @ApiResponse(responseCode = "401", description = "유효하지 않은 Refresh Token",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+        @ApiResponse(responseCode = "500", description = "서버 오류",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @PostMapping("/refresh")
     public ResponseEntity<?> refresh(HttpServletRequest request) {
         try {
@@ -251,6 +300,13 @@ public class AuthController {
      *
      * @return 로그아웃 결과
      */
+    @Operation(summary = "로그아웃", description = "사용자를 로그아웃하고 Refresh Token을 삭제합니다.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "로그아웃 성공",
+            content = @Content(schema = @Schema(implementation = LogoutResponse.class))),
+        @ApiResponse(responseCode = "500", description = "서버 오류",
+            content = @Content(schema = @Schema(implementation = LogoutResponse.class)))
+    })
     @PostMapping("/logout")
     public ResponseEntity<LogoutResponse> logout(HttpServletRequest request, HttpServletResponse response) {
         try {

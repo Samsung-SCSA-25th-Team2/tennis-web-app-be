@@ -60,7 +60,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     boolean existsByNicknameAndIdNot(String nickname, Long id);
 
-
     /**
      * OAuth2 Provider와 ProviderId로 유저 조회
      *

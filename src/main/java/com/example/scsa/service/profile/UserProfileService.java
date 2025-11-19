@@ -73,4 +73,13 @@ public class UserProfileService {
                 .name(user.getName())
                 .build();
     }
+
+    @Transactional
+    public void deleteUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException());
+
+        userRepository.delete(user);
+    }
+
 }

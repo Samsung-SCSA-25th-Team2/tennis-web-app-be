@@ -50,7 +50,7 @@ public class SecurityConfig {
                         // Protected API - JWT 인증 필요
                         .requestMatchers("/api/v1/auth/me").hasRole("USER")
                         // 나머지는 모두 허용 (개발 중)
-                        .anyRequest().permitAll()
+                        .anyRequest().authenticated()
                 )
 
                 // OAuth2 소셜 로그인 설정

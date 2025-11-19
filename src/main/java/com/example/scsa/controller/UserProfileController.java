@@ -140,4 +140,51 @@ public class UserProfileController {
                     .body(ErrorResponse.of("서버 오류가 발생했습니다.", "INTERNAL_SERVER_ERROR"));
         }
     }
+
+    /**
+     * 본인 계정 삭제 및 관련 데이터 제거
+     * DELETE /api/v1/users/me/delete
+     */
+    @DeleteMapping("/me/delete")
+    public ResponseEntity<?> deleteCurrentUser() {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        // 401 처리: 인증 안 된 경우
+        if (authentication == null || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
+            return ResponseEntity.status(401)
+                    .body(ErrorResponse.of("인증되지 않은 사용자입니다.", "UNAUTHORIZED"));
+        }
+
+        try {
+            Long userId = Long.parseLong(authentication.getName());
+            log.info("회원 탈퇴 요청 - userId: {}", userId);
+
+            userProfileService.deleteUser(userId);   // 실제 삭제 로직
+
+            SecurityContextHolder.clearContext();
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "회원탈퇴가 완료되었습니다.");
+
+            log.info("회원 탈퇴 성공 - userId: {}", userId);
+            return ResponseEntity.ok(response);
+
+        } catch (NumberFormatException e) {
+            log.error("잘못된 사용자 ID 형식: {}", authentication.getName());
+            return ResponseEntity.status(400)
+                    .body(ErrorResponse.of("잘못된 사용자 ID입니다.", "INVALID_USER_ID"));
+
+        } catch (UserNotFoundException e) {
+            log.warn("회원 탈퇴 실패 - 사용자를 찾을 수 없음");
+            return ResponseEntity.status(404)
+                    .body(ErrorResponse.of(e.getMessage(), "USER_NOT_FOUND"));
+
+        } catch (Exception e) {
+            log.error("회원 탈퇴 실패 - 서버 오류: {}", e.getMessage(), e);
+            return ResponseEntity.status(500)
+                    .body(ErrorResponse.of("서버 오류가 발생했습니다.", "INTERNAL_SERVER_ERROR"));
+        }
+    }
 }

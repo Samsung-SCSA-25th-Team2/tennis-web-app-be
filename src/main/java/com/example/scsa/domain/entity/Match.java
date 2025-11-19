@@ -92,6 +92,12 @@ public class Match extends BaseTimeEntity {
     @Column(nullable = false)
     private Long fee;
 
+    @Column(nullable = false)
+    private Long playerCountMen;
+
+    @Column(nullable = false)
+    private Long playerCountWomen;
+
     // 매치 설명 (선택사항)
     private String description;
 
@@ -99,7 +105,7 @@ public class Match extends BaseTimeEntity {
     @Builder
     public Match(User host, Court court, GameType gameType, MatchStatus matchStatus,
                  LocalDateTime matchStartDateTime, LocalDateTime matchEndDateTime,
-                 Long fee, String description) {
+                 Long fee, Long playerCountMen, Long playerCountWomen, String description) {
         validateMatchTime(matchStartDateTime, matchEndDateTime);
         validateFee(fee);
 
@@ -110,6 +116,8 @@ public class Match extends BaseTimeEntity {
         this.matchStartDateTime = matchStartDateTime;
         this.matchEndDateTime = matchEndDateTime;
         this.fee = fee;
+        this.playerCountMen = playerCountMen;
+        this.playerCountWomen = playerCountWomen;
         this.description = description;
 
         // 매치 생성 시 호스트를 참가자 목록에 자동 추가

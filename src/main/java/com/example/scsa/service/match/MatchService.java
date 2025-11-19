@@ -10,6 +10,8 @@ import com.example.scsa.domain.vo.Period;
 import com.example.scsa.dto.match.MatchDTO;
 import com.example.scsa.dto.match.MatchResponseDTO;
 import com.example.scsa.exception.CourtNotFoundException;
+import com.example.scsa.exception.MatchAccessDeniedException;
+import com.example.scsa.exception.MatchNotFoundException;
 import com.example.scsa.exception.UserNotFoundException;
 import com.example.scsa.repository.CourtRepository;
 import com.example.scsa.repository.MatchRepository;
@@ -50,6 +52,8 @@ public class MatchService {
                 .gameType(GameType.valueOf(dto.getGameType()))
                 .matchStatus(MatchStatus.RECRUITING)
                 .fee(dto.getFee())
+                .playerCountMen(dto.getPlayerCountMen())
+                .playerCountWomen(dto.getPlayerCountWomen())
                 .description(dto.getDescription())
                 .build();
 
@@ -66,5 +70,17 @@ public class MatchService {
         Match saved = matchRepository.save(match);
 
         return new MatchResponseDTO(saved.getId(), "매치가 성공적으로 등록되었습니다.");
+    }
+
+    @Transactional
+    public void deleteMatch(Long hostId, Long matchId) {
+        Match match = matchRepository.findById(matchId)
+                .orElseThrow(() -> new MatchNotFoundException());
+
+        if (!match.getHost().getId().equals(hostId)){
+            throw new MatchAccessDeniedException(matchId);
+        }
+
+        matchRepository.delete(match);
     }
 }

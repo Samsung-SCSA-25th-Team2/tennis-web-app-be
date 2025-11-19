@@ -13,6 +13,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 /**
  * Spring Security 설정
@@ -27,10 +28,13 @@ public class SecurityConfig {
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
     private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CorsConfigurationSource corsConfigurationSource;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                // CORS 설정 (프론트엔드와 백엔드가 다른 도메인일 때 필수)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 // JWT 기반 인증 사용으로 CSRF 보호 불필요 (쿠키 미사용)
                 .csrf(AbstractHttpConfigurer::disable)
                 // HTTP Basic 인증 비활성화

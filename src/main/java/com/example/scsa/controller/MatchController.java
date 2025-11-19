@@ -1,11 +1,10 @@
 package com.example.scsa.controller;
 
-import com.example.scsa.dto.match.MatchDTO;
-import com.example.scsa.dto.match.MatchResponseDTO;
-import com.example.scsa.dto.match.MatchSearchDTO;
+import com.example.scsa.dto.match.*;
 import com.example.scsa.dto.response.ErrorResponse;
 import com.example.scsa.exception.MatchAccessDeniedException;
 import com.example.scsa.exception.MatchNotFoundException;
+import com.example.scsa.service.match.MatchListService;
 import com.example.scsa.service.match.MatchSearchService;
 import com.example.scsa.service.match.MatchService;
 import jakarta.validation.Valid;
@@ -25,6 +24,7 @@ public class MatchController {
 
     private final MatchService matchService;
     private final MatchSearchService matchSearchService;
+    private final MatchListService matchListService;
 
     @PostMapping
     public ResponseEntity<?> createMatch(@Valid @RequestBody MatchDTO request) {
@@ -114,6 +114,10 @@ public class MatchController {
             return ResponseEntity.status(500)
                     .body(ErrorResponse.of("서버 내부 오류가 발생했습니다.", "INTERNAL_SERVER_ERROR"));
         }
+    }
 
+    @GetMapping
+    public MatchListResponseDTO getMatches(@ModelAttribute MatchListRequestDTO request) {
+        return matchListService.getMatchList(request);
     }
 }

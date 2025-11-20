@@ -56,6 +56,7 @@ public class SecurityConfig {
                         // Protected API - JWT 인증 필요
                         .requestMatchers("/api/v1/auth/me").hasRole("USER")
                         .requestMatchers("/api/v1/matches").permitAll()
+                        .requestMatchers("/api/v1/tennis-courts/**").permitAll()
                         // 나머지는 모두 허용 (개발 중)
                         .anyRequest().authenticated()
                 )

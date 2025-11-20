@@ -3,10 +3,14 @@ package com.example.scsa.service.profile;
 import com.example.scsa.domain.entity.User;
 import com.example.scsa.domain.vo.Age;
 import com.example.scsa.domain.vo.Gender;
+import com.example.scsa.domain.vo.MatchStatus;
 import com.example.scsa.domain.vo.Period;
 import com.example.scsa.dto.profile.UserProfileDTO;
+import com.example.scsa.dto.profile.UserProfileDeleteResponseDTO;
 import com.example.scsa.exception.InvalidProfileUpdateException;
+import com.example.scsa.exception.UserDeleteNotAllowedException;
 import com.example.scsa.exception.UserNotFoundException;
+import com.example.scsa.repository.MatchRepository;
 import com.example.scsa.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,12 +21,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserProfileService {
 
     private final UserRepository userRepository;
+    private final MatchRepository matchRepository;
 
     @Transactional(readOnly = true)
     public UserProfileDTO getUserProfile(Long userId){
         User user = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException());
 
         return UserProfileDTO.builder()
+                .userId(user.getUserId())
                 .nickname(user.getNickname())
                 .period(user.getPeriod().toString())
                 .gender(user.getGender().toString())
@@ -65,6 +71,7 @@ public class UserProfileService {
         }
 
         return UserProfileDTO.builder()
+                .userId(user.getUserId())
                 .nickname(user.getNickname())
                 .period(user.getPeriod().toString())
                 .gender(user.getGender().toString())
@@ -75,11 +82,26 @@ public class UserProfileService {
     }
 
     @Transactional
-    public void deleteUser(Long userId) {
+    public UserProfileDeleteResponseDTO deleteUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException());
 
-        userRepository.delete(user);
-    }
+        boolean hasRecruitingMatches =
+                matchRepository.existsByHost_IdAndMatchStatus(userId, MatchStatus.RECRUITING);
 
+        if (hasRecruitingMatches) {
+            throw new UserDeleteNotAllowedException(
+                    "현재 모집 중인 매치가 있어 탈퇴할 수 없습니다."
+            );
+        }
+
+        matchRepository.deleteAllByHost_IdAndMatchStatus(userId, MatchStatus.COMPLETED);
+
+        userRepository.delete(user);
+
+        return UserProfileDeleteResponseDTO.builder()
+                .userId(userId)
+                .message("회원탈퇴가 완료되었습니다.")
+                .build();
+    }
 }

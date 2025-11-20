@@ -373,4 +373,19 @@ public interface MatchRepository extends JpaRepository<Match, Long> {
             @Param("statuses") Set<MatchStatus> statuses,
             @Param("cursorId") Long cursorId
     );
+
+    /**
+     * 해당 유저가 호스트이고, 상태가 RECRUITING 인 매치가 하나라도 있는지
+     * @param hostId
+     * @param matchStatus
+     * @return
+     */
+    boolean existsByHost_IdAndMatchStatus(Long hostId, MatchStatus matchStatus);
+
+    /**
+     * 해당 유저가 호스트이고, 상태가 COMPLETED 인 매치가 하나라도 있는지
+     * @param hostId
+     * @param matchStatus
+     */
+    void deleteAllByHost_IdAndMatchStatus(Long hostId, MatchStatus matchStatus);
 }

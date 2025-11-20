@@ -56,7 +56,8 @@ CORS_ALLOWED_ORIGINS: ${PROD_CORS_ALLOWED_ORIGINS} # 예: "https://www.your-doma
 # Frontend URL
 FRONTEND_URL: ${PROD_FRONTEND_URL} # 예: "https://www.your-domain.com"
 
-# Cookie (보안 강화)
-COOKIE_SECURE: true
-COOKIE_SAME_SITE: Lax # 일반적으로 Lax가 더 안전합니다. 프론트/백엔드 도메인이 다를 경우 None 사용
-COOKIE_DOMAIN: ${PROD_COOKIE_DOMAIN} # 예: ".your-domain.com"
+# Cookie (Cross-Origin 설정)
+# FE: https://tennis-web-app-fe.pages.dev | BE: http://43.203.7.232:8080
+COOKIE_SECURE: ${PROD_COOKIE_SECURE:false} # HTTPS 사용 시 true, HTTP 사용 시 false
+COOKIE_SAME_SITE: None # Cross-Origin 쿠키를 위해 None 필요 (Secure=true 필수)
+COOKIE_DOMAIN: "" # 다른 도메인이므로 빈 문자열

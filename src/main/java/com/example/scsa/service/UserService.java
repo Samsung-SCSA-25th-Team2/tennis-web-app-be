@@ -24,6 +24,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
+    private final RefreshTokenService refreshTokenService;
 
     /**
      * 프로필 완성 처리
@@ -64,11 +65,19 @@ public class UserService {
         User savedUser = userRepository.save(user);
         log.info("프로필 완성 성공 - userId={}, nickname={}", userId, request.getNickname());
 
-        // 5. 새 JWT 토큰 생성 (프로필 완성 플래그 포함)
-        String newAccessToken = jwtUtil.generateToken(savedUser.getId(), savedUser.getRole().name());
+        // 5. 새 JWT 토큰 생성 (Access Token + Refresh Token)
+        String newAccessToken = jwtUtil.generateAccessToken(savedUser.getId(), savedUser.getRole().name());
+        String newRefreshToken = jwtUtil.generateRefreshToken(savedUser.getId());
 
-        // 6. 응답 생성
-        return ProfileCompleteResponse.from(savedUser, newAccessToken);
+        // 6. Refresh Token을 Redis에 저장
+        refreshTokenService.saveRefreshToken(
+                savedUser.getId(),
+                newRefreshToken,
+                jwtUtil.getRefreshTokenExpiration()
+        );
+
+        // 7. 응답 생성
+        return ProfileCompleteResponse.from(savedUser, newAccessToken, newRefreshToken);
     }
 
     /**

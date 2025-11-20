@@ -117,6 +117,10 @@ public class User extends BaseTimeEntity {
         this.age = age;
     }
 
+    public void updateGender(Gender gender) {
+        this.gender = gender;
+    }
+
     // 비즈니스 로직: 프로필 완성 여부 확인
     public boolean isProfileComplete() {
         return this.nickname != null

@@ -26,6 +26,7 @@ public class MatchListService {
 
     private final MatchRepository matchRepository;
     private final static Integer DEFAULT_SIZE = 10;
+    private final static Long DEFAULT_CURSOR = 1L;
 
     @Transactional(readOnly = true)
     public MatchListResponseDTO getMatchList(MatchListRequestDTO request) {

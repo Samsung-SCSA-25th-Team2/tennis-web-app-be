@@ -49,4 +49,4 @@ out/
 #application-local.yml
 
 ### 추가적인 사항들 ###
-#application.yml
+application.yml

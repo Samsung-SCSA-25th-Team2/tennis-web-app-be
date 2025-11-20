@@ -14,14 +14,6 @@ java {
 	}
 }
 
-sourceSets {
-	main {
-		resources {
-			srcDirs = ["src/main/resources"]
-		}
-	}
-}
-
 configurations {
 	compileOnly {
 		extendsFrom annotationProcessor

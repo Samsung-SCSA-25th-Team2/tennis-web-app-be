@@ -2,6 +2,7 @@ package com.example.scsa.repository;
 
 import com.example.scsa.domain.entity.Match;
 import com.example.scsa.domain.entity.User;
+import com.example.scsa.domain.vo.GameType;
 import com.example.scsa.domain.vo.MatchStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Match 엔티티 Repository
@@ -345,4 +347,30 @@ public interface MatchRepository extends JpaRepository<Match, Long> {
            "ORDER BY m.matchStartDateTime DESC")
     List<Match> findByCourtId(@Param("courtId") Long courtId);
 
+    /**
+     * 기본 필터:
+     *  - 시작 시간이 주어진 구간 안
+     *  - gameType (nullable이면 전체)
+     *  - status IN (...)
+     *  - cursor 이전 match까지(optional)
+     * 정렬은 Service에서 직접 한다.
+     */
+    @Query("""
+            select m
+            from Match m
+            join fetch m.host h
+            join fetch m.court c
+            where m.matchStartDateTime >= :startDateTime
+              and m.matchEndDateTime <= :endDateTime
+              and (:gameType is null or m.gameType = :gameType)
+              and m.matchStatus in :statuses
+              and (:cursorId is null or m.id < :cursorId)
+            """)
+    List<Match> findForList(
+            @Param("startDateTime") LocalDateTime startDateTime,
+            @Param("endDateTime") LocalDateTime endDateTime,
+            @Param("gameType") GameType gameType,
+            @Param("statuses") Set<MatchStatus> statuses,
+            @Param("cursorId") Long cursorId
+    );
 }

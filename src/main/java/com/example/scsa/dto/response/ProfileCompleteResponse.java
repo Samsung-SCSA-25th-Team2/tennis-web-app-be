@@ -24,7 +24,8 @@ public class ProfileCompleteResponse {
     private String name;
     private String imgUrl;
     private boolean isProfileComplete;
-    private String accessToken;  // 새로운 JWT 토큰
+    private String accessToken;  // Access Token
+    private String refreshToken;  // Refresh Token
 
     public static ProfileCompleteResponse from(User user, String accessToken) {
         return ProfileCompleteResponse.builder()
@@ -37,6 +38,21 @@ public class ProfileCompleteResponse {
                 .imgUrl(user.getImgUrl())
                 .isProfileComplete(user.isProfileComplete())
                 .accessToken(accessToken)
+                .build();
+    }
+
+    public static ProfileCompleteResponse from(User user, String accessToken, String refreshToken) {
+        return ProfileCompleteResponse.builder()
+                .userId(user.getId())
+                .nickname(user.getNickname())
+                .gender(user.getGender())
+                .period(user.getPeriod())
+                .age(user.getAge())
+                .name(user.getName())
+                .imgUrl(user.getImgUrl())
+                .isProfileComplete(user.isProfileComplete())
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
                 .build();
     }
 }

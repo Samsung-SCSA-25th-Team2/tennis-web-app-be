@@ -361,7 +361,7 @@ public interface MatchRepository extends JpaRepository<Match, Long> {
             join fetch m.host h
             join fetch m.court c
             where m.matchStartDateTime >= :startDateTime
-              and m.matchStartDateTime <= :endDateTime
+              and m.matchEndDateTime <= :endDateTime
               and (:gameType is null or m.gameType = :gameType)
               and m.matchStatus in :statuses
               and (:cursorId is null or m.id < :cursorId)

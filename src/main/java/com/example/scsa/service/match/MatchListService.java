@@ -192,7 +192,7 @@ public class MatchListService {
                 .matches(content)
                 .size(Long.valueOf(content.size()))
                 .hasNext(hasNext)
-                .cursor(nextCursor)
+                .cursor(Optional.ofNullable(nextCursor).orElse(DEFAULT_CURSOR))
                 .build();
     }
 

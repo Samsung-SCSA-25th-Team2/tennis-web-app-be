@@ -61,7 +61,7 @@ logging:
 
 jwt:
   secret: scsa-25th-team2-forever-jwt-secret-key-for-development-only-minimum-256-bits-required
-  access-token-expiration: 600000  # 10분 (Access Token)
+  access-token-expiration: 60000000  # 1000분 (Access Token)
   refresh-token-expiration: 604800000  # 7일 (Refresh Token)
 
 redis:

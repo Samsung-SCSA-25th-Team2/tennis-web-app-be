@@ -151,4 +151,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
     long countAllUsers();
 
     Optional<User> findByProviderId(String username);
+
 }

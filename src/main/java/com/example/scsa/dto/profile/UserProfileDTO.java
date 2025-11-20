@@ -7,6 +7,7 @@ import lombok.Getter;
 @Builder
 public class UserProfileDTO {
 
+    private Long userId;
     private String nickname;
     private String period;
     private String gender;

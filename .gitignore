@@ -45,8 +45,8 @@ out/
 .env
 .env.local
 .env.*.local
-application-secret.yml
-application-local.yml
+#application-secret.yml
+#application-local.yml
 
 ### 추가적인 사항들 ###
 #application.yml

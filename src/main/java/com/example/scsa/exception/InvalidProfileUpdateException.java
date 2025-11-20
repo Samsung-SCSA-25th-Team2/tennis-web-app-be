@@ -10,6 +10,6 @@ public class InvalidProfileUpdateException extends RuntimeException {
     }
 
     public InvalidProfileUpdateException(String message) {
-        super(message);
+        super("프로필을 업데이트 할 수 없습니다.");
     }
 }

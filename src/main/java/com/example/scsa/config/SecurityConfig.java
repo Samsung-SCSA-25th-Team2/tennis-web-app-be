@@ -13,6 +13,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 /**
  * Spring Security 설정
@@ -27,10 +28,13 @@ public class SecurityConfig {
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
     private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CorsConfigurationSource corsConfigurationSource;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                // CORS 설정 (프론트엔드와 백엔드가 다른 도메인일 때 필수)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 // JWT 기반 인증 사용으로 CSRF 보호 불필요 (쿠키 미사용)
                 .csrf(AbstractHttpConfigurer::disable)
                 // HTTP Basic 인증 비활성화
@@ -44,7 +48,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         // Public 경로
                         .requestMatchers("/", "/index.html", "/oauth2/**", "/error", "/favicon.ico").permitAll()
-                        .requestMatchers("/api/v1/auth/status", "/api/v1/auth/logout").permitAll() // 인증 상태 조회 및 로그아웃은 누구나 가능
+                        .requestMatchers("/login", "/login/**").permitAll() // 로그인 페이지 접근 허용
+                        .requestMatchers("/auth/**").permitAll() // OAuth2 콜백 페이지 접근 허용
+                        .requestMatchers("/api/v1/auth/status", "/api/v1/auth/logout", "/api/v1/auth/refresh").permitAll() // 토큰 재발급은 누구나 가능
                         // Swagger UI 경로
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
                         // Protected API - JWT 인증 필요

@@ -20,4 +20,24 @@ public interface CourtRepository extends JpaRepository<Court, Long> {
               or lower(c.location)  like lower(concat('%', :keyword, '%'))
            """)
     Slice<Court> findByKeyword (@Param("keyword") String keyword, Pageable pageable);
+
+    /**
+     * 커서 기반 검색 쿼리
+     *
+     * - id ASC 정렬 (Pageable의 Sort와 맞춰 사용)
+     * - cursor == 0 이면 전체에서 조회
+     * - cursor > 0 이면 cursor보다 큰 id만 조회
+     */
+    @Query("""
+           select c
+           from Court c
+           where (lower(c.courtName) like lower(concat('%', :keyword, '%'))
+                  or lower(c.location)  like lower(concat('%', :keyword, '%')))
+             and (:cursor = 0 or c.id > :cursor)
+           """)
+    List<Court> findByKeywordWithCursor(
+            @Param("keyword") String keyword,
+            @Param("cursor") long cursor,
+            Pageable pageable
+    );
 }

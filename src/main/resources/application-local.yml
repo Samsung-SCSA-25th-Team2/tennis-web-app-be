@@ -3,7 +3,7 @@
 # --- application-common.yml의 환경 변수 값 설정 ---
 
 # Server
-SERVER_PORT: 8080
+SERVER_PORT: 8888
 
 # Database (로컬 개발 시 사용할 DB)
 spring:
@@ -25,7 +25,7 @@ OAUTH2_REDIRECT_URI: "{baseUrl}/login/oauth2/code/kakao"
 
 # JWT
 JWT_SECRET: "scsa-25th-team2-forever-jwt-secret-key-for-development-only-minimum-256-bits-required"
-JWT_ACCESS_EXPIRATION: 600000      # 10분
+JWT_ACCESS_EXPIRATION: 60000000      # 1000분
 JWT_REFRESH_EXPIRATION: 604800000 # 7일
 
 # Redis
@@ -44,7 +44,7 @@ CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5173,http://127.0.
 
 # Frontend URL (임시로 백엔드 URL 사용 - 테스트용)
 ### 동훈이형 여기서 5173으로 바꿔서 테스트 해주세여 ###
-FRONTEND_URL: "http://localhost:8080"
+FRONTEND_URL: "http://localhost:8888"
 
 # Cookie
 COOKIE_SECURE: false

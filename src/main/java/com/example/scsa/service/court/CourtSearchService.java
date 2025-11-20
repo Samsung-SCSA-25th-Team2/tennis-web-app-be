@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,18 +22,36 @@ public class CourtSearchService {
     private final CourtRepository courtRepository;
 
     @Transactional(readOnly = true)
-    public CourtSearchDTO searchByKeyword(String keyword, int page, int size){
+    public CourtSearchDTO searchByKeyword(String keyword, Long cursor, int size) {
 
-        Pageable pageable = PageRequest.of(page, size);
+        long effectiveCursor = (cursor == null) ? 0L : cursor;
 
-        Slice<Court> slice = courtRepository.findByKeyword(keyword, pageable);
+        // size + 1개를 조회해서 hasNext 여부 판단
+        Pageable pageable = PageRequest.of(
+                0,
+                size + 1,
+                Sort.by(Sort.Direction.ASC, "id")
+        );
 
-        List<CourtDTO> items = slice.getContent().stream()
+        List<Court> courts = courtRepository.findByKeywordWithCursor(keyword, effectiveCursor, pageable);
+
+        boolean hasNext = false;
+
+        if (courts.size() > size) {
+            hasNext = true;
+            courts = courts.subList(0, size);
+        }
+
+        long nextCursor = courts.isEmpty()
+                ? 1L
+                : courts.get(courts.size() - 1).getId();
+
+        List<CourtDTO> items = courts.stream()
                 .map(court -> CourtDTO.builder()
                         .courtId(court.getId())
                         .thumbnail(court.getImgUrl())
                         .latitude(court.getLatitude())
-                        .longitude(court.getLatitude())
+                        .longitude(court.getLongitude())
                         .address(court.getLocation())
                         .name(court.getCourtName())
                         .build())
@@ -40,9 +59,9 @@ public class CourtSearchService {
 
         return CourtSearchDTO.builder()
                 .courts(items)
-                .hasNext(slice.hasNext())
-                .page(slice.getNumber())
-                .size(slice.getSize())
+                .hasNext(hasNext)
+                .cursor(nextCursor)          // 다음 요청 시 사용할 마지막 courtId (없으면 0)
+                .size(items.size())          // 현재 페이지 내 데이터 개수
                 .build();
     }
 }

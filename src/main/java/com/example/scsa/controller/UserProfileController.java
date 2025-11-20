@@ -2,9 +2,11 @@ package com.example.scsa.controller;
 
 
 import com.example.scsa.dto.profile.UserProfileDTO;
+import com.example.scsa.dto.profile.UserProfileDeleteResponseDTO;
 import com.example.scsa.dto.request.ProfileCompleteRequest;
 import com.example.scsa.dto.response.ErrorResponse;
 import com.example.scsa.dto.response.ProfileCompleteResponse;
+import com.example.scsa.exception.UserDeleteNotAllowedException;
 import com.example.scsa.exception.UserNotFoundException;
 import com.example.scsa.repository.UserRepository;
 import com.example.scsa.service.UserService;
@@ -205,12 +207,9 @@ public class UserProfileController {
             Long userId = Long.parseLong(authentication.getName());
             log.info("회원 탈퇴 요청 - userId: {}", userId);
 
-            userProfileService.deleteUser(userId);   // 실제 삭제 로직
+            UserProfileDeleteResponseDTO response = userProfileService.deleteUser(userId);   // 실제 삭제 로직
 
             SecurityContextHolder.clearContext();
-
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "회원탈퇴가 완료되었습니다.");
 
             log.info("회원 탈퇴 성공 - userId: {}", userId);
             return ResponseEntity.ok(response);
@@ -225,7 +224,12 @@ public class UserProfileController {
             return ResponseEntity.status(404)
                     .body(ErrorResponse.of(e.getMessage(), "USER_NOT_FOUND"));
 
-        } catch (Exception e) {
+        } catch (UserDeleteNotAllowedException e) {
+            log.warn("회원 탈퇴 실패 - 본인이 개설한 매치가 존재함");
+            return ResponseEntity.status(409)
+                    .body(ErrorResponse.of(e.getMessage(), "MATCH_EXISTS"));
+
+        }catch (Exception e) {
             log.error("회원 탈퇴 실패 - 서버 오류: {}", e.getMessage(), e);
             return ResponseEntity.status(500)
                     .body(ErrorResponse.of("서버 오류가 발생했습니다.", "INTERNAL_SERVER_ERROR"));

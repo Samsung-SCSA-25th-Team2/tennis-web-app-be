@@ -29,7 +29,10 @@ public class CourtController {
      * 테니스장 단건 조회
      * GET /api/v1/tennis-courts/{court_id}
      */
-    @Operation(summary = "테니스장 상세 조회", description = "테니스장 ID로 특정 테니스장의 상세 정보를 조회합니다.")
+    @Operation(
+            summary = "테니스장 상세 조회",
+            description = "테니스장 ID로 특정 테니스장의 상세 정보를 조회합니다."
+    )
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "조회 성공",
             content = @Content(schema = @Schema(implementation = CourtDTO.class)))
@@ -43,21 +46,27 @@ public class CourtController {
     }
 
     /**
-     * keyword를 통한 테니스장 검색
-     * GET /api/v1/tennis-courts/search?keyword={keyword}
+     * keyword를 통한 테니스장 검색(커서 기반)
+     * GET /api/v1/tennis-courts/search?keyword={keyword}&size={size}&cursor={cursor}
      */
-    @Operation(summary = "테니스장 검색", description = "키워드로 테니스장을 검색합니다. 페이징을 지원합니다.")
+    @Operation(
+            summary = "테니스장 검색",
+            description = "키워드로 테니스장을 검색합니다. 커서 기반 페이지네이션을 지원합니다."
+    )
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "검색 성공",
             content = @Content(schema = @Schema(implementation = CourtSearchDTO.class)))
     })
     @GetMapping("/search")
     public ResponseEntity<CourtSearchDTO> searchCourts(
-            @Parameter(description = "검색 키워드", required = true) @RequestParam("keyword") String keyword,
-            @Parameter(description = "페이지 번호 (0부터 시작)", example = "0") @RequestParam(value = "page", defaultValue = "0") int page,
-            @Parameter(description = "페이지 크기", example = "10") @RequestParam(value = "size", defaultValue = "10") int size){
+            @Parameter(description = "검색 키워드", required = true)
+            @RequestParam("keyword") String keyword,
+            @Parameter(description = "페이지 크기", example = "10")
+            @RequestParam(value = "size", defaultValue = "10") Integer size,
+            @Parameter(description = "커서(마지막 courtId). 최초 요청 시 생략 가능", example = "0")
+            @RequestParam(value = "cursor", required = false) Long cursor){
 
-        CourtSearchDTO result = courtSearchService.searchByKeyword(keyword, page, size);
+        CourtSearchDTO result = courtSearchService.searchByKeyword(keyword, cursor, size);
         return ResponseEntity.ok(result);
     }
 }

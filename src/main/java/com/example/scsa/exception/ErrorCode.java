@@ -30,6 +30,9 @@ public enum ErrorCode {
     // Match
     MATCH_NOT_FOUND(HttpStatus.NOT_FOUND, "MATCH-001", "존재하지 않는 경기입니다."),
 
+    //Chat
+    CHAT_ROOM_ALREADY_EXISTS(HttpStatus.CONFLICT, "CHAT-001", "이미 존재하는 채팅방입니다."),
+
     // Auth
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH-001", "유효하지 않은 토큰입니다."),
     EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH-002", "만료된 토큰입니다."),

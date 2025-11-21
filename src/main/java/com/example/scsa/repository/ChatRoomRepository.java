@@ -153,4 +153,12 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     @Query("SELECT COUNT(cr) FROM ChatRoom cr WHERE cr.matchId = :matchId")
     long countByMatchId(@Param("matchId") Long matchId);
 
+    /**
+     * 특정 매치와 두명의 유저가 존재하는 지 확인
+     * @param matchId 매치 ID
+     * @param user1Id 첫번째 유저 ID
+     * @param user2Id 두번째 유저 ID
+     * @return 존재 여부
+     */
+    boolean existsByMatchIdAndUser1_IdAndUser2_Id(Long matchId, Long user1Id, Long user2Id);
 }

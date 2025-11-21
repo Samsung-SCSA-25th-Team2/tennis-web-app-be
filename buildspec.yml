@@ -16,7 +16,15 @@ phases:
       - ./gradlew clean build -x test
   post_build:
     commands:
-      - echo "Post_build – 빌드 후 아티팩트 검증(필요시)"
+      - echo "Post_build – 빌드 후 아티팩트 검증"
+      - echo "Checking build artifacts..."
+      - ls -lah build/libs/
+      - echo "Checking appspec.yml..."
+      - ls -lah appspec.yml
+      - echo "Checking scripts..."
+      - ls -lah scripts/
+      - echo "Current directory structure:"
+      - find . -type f -name "*.jar" -o -name "appspec.yml" -o -path "*/scripts/*"
 
 artifacts:
   files:

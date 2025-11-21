@@ -167,4 +167,13 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
         Pageable pageable
     );
 
+    @Query("""
+        SELECT COUNT(c)
+        FROM Chat c
+        WHERE c.chatRoom.id = :chatRoomId
+          AND c.sender.id <> :userId
+          AND c.isRead = false
+        """)
+    long countUnreadMessages(Long chatRoomId, Long userId);
+
 }

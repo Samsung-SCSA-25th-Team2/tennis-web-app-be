@@ -33,29 +33,67 @@ java -version 2>&1 | head -1
 # JAR 파일 찾기 (여러 경로 시도)
 JAR_FILE=""
 
-# 1. build/libs/ 디렉토리에서 찾기
+echo "Searching for JAR file..."
+
+# 1. build/libs/ 디렉토리에서 찾기 (gradle-wrapper 제외)
 if [ -d "$APP_DIR/build/libs" ]; then
-    JAR_FILE=$(ls -t $APP_DIR/build/libs/*.jar 2>/dev/null | grep -v plain | head -1)
+    echo "Checking build/libs/ directory..."
+    JAR_FILE=$(ls -t $APP_DIR/build/libs/*.jar 2>/dev/null | grep -v plain | grep -v wrapper | head -1)
+    if [ -n "$JAR_FILE" ]; then
+        echo "Found in build/libs/: $JAR_FILE"
+    fi
 fi
 
-# 2. 루트 디렉토리에서 찾기
+# 2. 루트 디렉토리에서 찾기 (gradle-wrapper 제외)
 if [ -z "$JAR_FILE" ]; then
-    JAR_FILE=$(ls -t $APP_DIR/*.jar 2>/dev/null | grep -v plain | head -1)
+    echo "Checking root directory..."
+    JAR_FILE=$(ls -t $APP_DIR/*.jar 2>/dev/null | grep -v plain | grep -v wrapper | head -1)
+    if [ -n "$JAR_FILE" ]; then
+        echo "Found in root: $JAR_FILE"
+    fi
 fi
 
-# 3. find로 전체 검색
+# 3. find로 scsa 이름의 JAR 찾기 (가장 확실한 방법)
 if [ -z "$JAR_FILE" ]; then
-    JAR_FILE=$(find $APP_DIR -name "*.jar" -type f ! -name "*plain*" | head -1)
+    echo "Searching for scsa*.jar..."
+    JAR_FILE=$(find $APP_DIR -name "scsa*.jar" -type f ! -name "*plain*" | head -1)
+    if [ -n "$JAR_FILE" ]; then
+        echo "Found scsa JAR: $JAR_FILE"
+    fi
+fi
+
+# 4. gradle-wrapper가 아닌 모든 JAR 검색
+if [ -z "$JAR_FILE" ]; then
+    echo "Searching for any non-wrapper JAR..."
+    JAR_FILE=$(find $APP_DIR -name "*.jar" -type f ! -name "*plain*" ! -name "*wrapper*" ! -path "*/gradle/*" | head -1)
+    if [ -n "$JAR_FILE" ]; then
+        echo "Found JAR: $JAR_FILE"
+    fi
 fi
 
 if [ -z "$JAR_FILE" ]; then
-    echo "Error: JAR file not found in $APP_DIR"
+    echo "ERROR: JAR file not found in $APP_DIR"
+    echo "Directory structure:"
+    find $APP_DIR -name "*.jar" -type f
+    echo ""
     echo "Directory contents:"
-    ls -la $APP_DIR
+    ls -laR $APP_DIR
     exit 1
 fi
 
-echo "Found JAR file: $JAR_FILE"
+echo "Selected JAR file: $JAR_FILE"
+
+# JAR 파일 검증
+if [ ! -f "$JAR_FILE" ]; then
+    echo "ERROR: JAR file does not exist: $JAR_FILE"
+    exit 1
+fi
+
+# 실행 가능한 JAR인지 확인
+if ! jar tf "$JAR_FILE" | grep -q "BOOT-INF"; then
+    echo "WARNING: JAR file may not be a Spring Boot executable JAR"
+    echo "Attempting to run anyway..."
+fi
 
 # 로그 디렉토리 생성
 LOG_DIR=/var/log/tennis-web-app

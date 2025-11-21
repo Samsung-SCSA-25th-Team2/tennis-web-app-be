@@ -23,3 +23,5 @@ artifacts:
     - build/libs/*.jar
     - appspec.yml
     - scripts/*
+  name: tennis-web-app-build
+  discard-paths: no

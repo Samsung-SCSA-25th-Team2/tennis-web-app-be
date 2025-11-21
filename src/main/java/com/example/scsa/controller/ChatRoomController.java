@@ -6,7 +6,6 @@ import com.example.scsa.dto.chat.ChatRoomListRequestDTO;
 import com.example.scsa.dto.chat.ChatRoomListResponseDTO;
 import com.example.scsa.dto.response.ErrorResponse;
 import com.example.scsa.exception.ChatRoomAlreadyExistsException;
-import com.example.scsa.exception.ChatRoomNotFoundException;
 import com.example.scsa.exception.UserDeleteNotAllowedException;
 import com.example.scsa.exception.UserNotFoundException;
 import com.example.scsa.service.chat.ChatRoomService;

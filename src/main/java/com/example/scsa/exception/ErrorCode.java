@@ -32,6 +32,7 @@ public enum ErrorCode {
 
     //Chat
     CHAT_ROOM_ALREADY_EXISTS(HttpStatus.CONFLICT, "CHAT-001", "이미 존재하는 채팅방입니다."),
+    INVALID_CHAT_MESSAGE(HttpStatus.BAD_REQUEST, "CHAT-002", "잘못된 채팅 메시지입니다."),
 
     // Auth
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH-001", "유효하지 않은 토큰입니다."),

@@ -176,4 +176,11 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
         """)
     long countUnreadMessages(Long chatRoomId, Long userId);
 
+    /**
+     * 채팅방에 생성된 채팅을 메세지를 오래된 순으로 리스트 리턴
+     * @param chatRoomId 채팅방 ID
+     * @return 채팅 리스트
+     */
+    List<Chat> findByChatRoomIdOrderByCreatedAtAsc(Long chatRoomId);
+
 }

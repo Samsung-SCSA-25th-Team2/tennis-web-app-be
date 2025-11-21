@@ -17,11 +17,28 @@ else
     echo "Application will use default values from application.yml"
 fi
 
-# JAR 파일 찾기 (가장 최근 파일)
-JAR_FILE=$(ls -t $APP_DIR/build/libs/*.jar | head -1)
+# JAR 파일 찾기 (여러 경로 시도)
+JAR_FILE=""
+
+# 1. build/libs/ 디렉토리에서 찾기
+if [ -d "$APP_DIR/build/libs" ]; then
+    JAR_FILE=$(ls -t $APP_DIR/build/libs/*.jar 2>/dev/null | grep -v plain | head -1)
+fi
+
+# 2. 루트 디렉토리에서 찾기
+if [ -z "$JAR_FILE" ]; then
+    JAR_FILE=$(ls -t $APP_DIR/*.jar 2>/dev/null | grep -v plain | head -1)
+fi
+
+# 3. find로 전체 검색
+if [ -z "$JAR_FILE" ]; then
+    JAR_FILE=$(find $APP_DIR -name "*.jar" -type f ! -name "*plain*" | head -1)
+fi
 
 if [ -z "$JAR_FILE" ]; then
-    echo "Error: JAR file not found in $APP_DIR/build/libs/"
+    echo "Error: JAR file not found in $APP_DIR"
+    echo "Directory contents:"
+    ls -la $APP_DIR
     exit 1
 fi
 

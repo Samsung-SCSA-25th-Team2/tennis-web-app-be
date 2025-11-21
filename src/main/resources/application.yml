@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: ${DB_URL:jdbc:mysql://db-tennis-web-app.cnqkisgwa8vz.ap-northeast-2.rds.amazonaws.com:3306/db-tennis-web-app?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8}
-    username: ${DB_USERNAME:admin}
-    password: ${DB_PASSWORD:12345678}
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: ${DB_POOL_MAX_SIZE:20}

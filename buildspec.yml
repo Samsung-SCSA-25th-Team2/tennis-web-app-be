@@ -8,7 +8,7 @@ phases:
       - echo "Install – 필요한 패키지/환경 셋업"
       - chmod +x gradlew
   pre_build:
-    commands:0
+    commands:
       - echo "Pre_build – 환경 변수 등 준비 작업"
   build:
     commands:

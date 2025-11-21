@@ -13,9 +13,9 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: ${DDL_AUTO:update}
+      ddl-auto: ${DDL_AUTO}
       default_batch_fetch_size: 100
-    show-sql: ${SHOW_SQL:false}
+    show-sql: ${SHOW_SQL}
     properties:
       hibernate:
         format_sql: true
@@ -24,7 +24,7 @@ spring:
 
   sql:
     init:
-      mode: ${SQL_INIT_MODE:never}
+      mode: ${SQL_INIT_MODE}
       continue-on-error: true
 
   security:
@@ -34,7 +34,7 @@ spring:
           kakao:
             client-id: ${KAKAO_CLIENT_ID}
             client-secret: ${KAKAO_CLIENT_SECRET}
-            redirect-uri: ${OAUTH2_REDIRECT_URI:{baseUrl}/login/oauth2/code/kakao}
+            redirect-uri: ${OAUTH2_REDIRECT_URI}
             client-authentication-method: client_secret_post
             authorization-grant-type: authorization_code
             scope:
@@ -54,8 +54,8 @@ server:
 # JWT 설정
 jwt:
   secret: ${JWT_SECRET}
-  access-token-expiration: ${JWT_ACCESS_EXPIRATION:600000}    # 10분
-  refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:604800000} # 7일
+  access-token-expiration: ${JWT_ACCESS_EXPIRATION}
+  refresh-token-expiration: ${JWT_REFRESH_EXPIRATION} # 7일
 
 # Redis 설정
 redis:
@@ -66,12 +66,12 @@ redis:
 # Logging
 logging:
   level:
-    org.springframework.web: ${LOG_LEVEL_WEB:INFO}
-    org.springframework.security: ${LOG_LEVEL_SECURITY:INFO}
-    org.springframework.data.jpa: ${LOG_LEVEL_JPA:INFO}
-    com.example.scsa: ${LOG_LEVEL_APP:INFO}
+    org.springframework.web: ${LOG_LEVEL_WEB}
+    org.springframework.security: ${LOG_LEVEL_SECURITY}
+    org.springframework.data.jpa: ${LOG_LEVEL_JPA}
+    com.example.scsa: ${LOG_LEVEL_APP}
   file:
-    name: ${LOG_FILE:/var/log/tennis-web-app/application.log}
+    name: ${LOG_FILE}
   pattern:
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
 
@@ -101,6 +101,6 @@ app:
 
 # 쿠키 설정
 cookie:
-  secure: ${COOKIE_SECURE:false}
-  same-site: ${COOKIE_SAME_SITE:Lax}
+  secure: ${COOKIE_SECURE}
+  same-site: ${COOKIE_SAME_SITE}
   domain: ${COOKIE_DOMAIN:}

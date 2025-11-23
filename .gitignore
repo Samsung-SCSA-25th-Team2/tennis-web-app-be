@@ -1,5 +1,6 @@
 HELP.md
 .gradle
+gradle/
 build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
@@ -42,11 +43,8 @@ out/
 .LSOverride
 
 ### 환경 변수 및 보안 ###
-.env
 .env.local
+.env.prod
 .env.*.local
 #application-secret.yml
 #application-local.yml
-
-### 추가적인 사항들 ###
-application.yml

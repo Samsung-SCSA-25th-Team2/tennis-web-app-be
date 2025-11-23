@@ -18,11 +18,13 @@ public class ChatWsController {
     @MessageMapping("/chat.send")
     public void send(ChatMessageRequestDTO requestDTO) {
 
-        // DB 저장
+        // 1. DB 저장
         ChatMessageResponseDTO saved = chatService.saveChat(requestDTO);
 
-        // /topic/chat-room/{id} 모든 구독자에게 전송
-        String destination = "/topic/chat-room/" + saved.getChatRoomId();
+        // 2. STOMP Broker Relay를 통해 모든 구독자에게 전송
+        // RabbitMQ가 메시지를 모든 서버 인스턴스에 자동으로 브로드캐스트
+        // RabbitMQ STOMP에서는 슬래시 대신 점(.)을 사용해야 함
+        String destination = "/topic/chatroom." + saved.getChatRoomId();
         messagingTemplate.convertAndSend(destination, saved);
     }
 }

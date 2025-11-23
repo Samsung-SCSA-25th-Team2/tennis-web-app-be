@@ -5,8 +5,8 @@ echo "Checking application health..."
 
 # 최대 30초 동안 헬스 체크 시도
 for i in {1..30}; do
-    # Spring Boot Actuator health endpoint 체크
-    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/actuator/health)
+    # Internal health endpoint 체크 (JWT/예외 처리와 완전히 분리됨)
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/internal/health)
 
     if [ "$HTTP_CODE" -eq 200 ]; then
         echo "Health check passed! (HTTP $HTTP_CODE)"

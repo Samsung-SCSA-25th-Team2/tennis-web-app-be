@@ -10,6 +10,13 @@ import com.example.scsa.exception.UserDeleteNotAllowedException;
 import com.example.scsa.exception.UserNotFoundException;
 import com.example.scsa.service.chat.ChatRoomService;
 import com.example.scsa.dto.auth.CustomOAuth2User;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +27,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "채팅방", description = "1:1 채팅방 관리 API (STOMP WebSocket 기반)")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/chat/rooms")
@@ -28,11 +36,35 @@ public class ChatRoomController {
 
     private final ChatRoomService chatRoomService;
 
-    /**
-     *  채팅방 생성
-     */
+    @Operation(
+        summary = "채팅방 생성",
+        description = "매치에서 호스트와 게스트 간의 1:1 채팅방을 생성합니다. " +
+                     "같은 매치에서 동일한 두 사용자 간에는 하나의 채팅방만 생성 가능합니다. " +
+                     "생성된 채팅방 ID를 사용하여 WebSocket으로 실시간 채팅이 가능합니다."
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "채팅방 생성 성공",
+            content = @Content(schema = @Schema(implementation = ChatRoomCreateResponseDTO.class))
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "인증 실패",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+        ),
+        @ApiResponse(
+            responseCode = "409",
+            description = "이미 존재하는 채팅방",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+        )
+    })
     @PostMapping
     public ResponseEntity<?> createChatRoom(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                description = "채팅방 생성 요청 정보 (매치 ID와 게스트 ID 필요)",
+                required = true
+            )
             @RequestBody ChatRoomCreateRequestDTO request
     ) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -68,9 +100,28 @@ public class ChatRoomController {
         }
     }
 
+    @Operation(
+        summary = "내 채팅방 목록 조회",
+        description = "현재 로그인한 사용자의 채팅방 목록을 커서 기반 페이징으로 조회합니다. " +
+                     "최근 메시지 시간 순으로 정렬되며, 각 채팅방의 안읽은 메시지 수와 마지막 메시지 미리보기를 포함합니다."
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "채팅방 목록 조회 성공",
+            content = @Content(schema = @Schema(implementation = ChatRoomListResponseDTO.class))
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "인증 실패",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+        )
+    })
     @GetMapping("/my")
     public ResponseEntity<?> getMyChatRooms(
+            @Parameter(description = "페이징 커서 (마지막 메시지 시간, ISO-8601 형식)", example = "2025-11-24T12:34:56")
             @RequestParam(required = false) String cursor,
+            @Parameter(description = "한 번에 조회할 채팅방 수", example = "20")
             @RequestParam(required = false) Integer size
     ) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

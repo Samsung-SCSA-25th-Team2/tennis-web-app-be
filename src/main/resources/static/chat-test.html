@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>채팅 테스트 (JWT)</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .container {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        .section {
+            margin-bottom: 25px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+        }
+        .section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .connection-status {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-family: monospace;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        button.success {
+            background-color: #28a745;
+        }
+        button.success:hover {
+            background-color: #218838;
+        }
+        .messages {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            background-color: white;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .message {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            background-color: #e9ecef;
+        }
+        .message.my-message {
+            background-color: #d1e7ff;
+            margin-left: 20%;
+        }
+        .message .sender {
+            font-weight: bold;
+            color: #007bff;
+        }
+        .message .time {
+            font-size: 0.8em;
+            color: #666;
+        }
+        .info-text {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+        .api-response {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>1:1 채팅 테스트 (JWT 인증)</h1>
+
+        <div id="connectionStatus" class="connection-status disconnected">
+            ❌ 연결 안됨
+        </div>
+
+        <!-- 1. API 설정 -->
+        <div class="section">
+            <h3>1️⃣ API 설정</h3>
+            <div class="input-group">
+                <label>API 서버 URL:</label>
+                <input type="text" id="apiUrl" value="http://localhost:8080">
+            </div>
+            <div class="input-group">
+                <label>JWT 토큰:</label>
+                <input type="text" id="jwtToken" placeholder="Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                <p class="info-text">카카오 로그인 후 받은 JWT 토큰을 입력하세요</p>
+            </div>
+        </div>
+
+        <!-- 2. 채팅방 생성/조회 -->
+        <div class="section">
+            <h3>2️⃣ 채팅방 생성/조회</h3>
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <div style="flex: 1;">
+                    <label>매치 ID:</label>
+                    <input type="number" id="matchId" value="1">
+                </div>
+                <div style="flex: 1;">
+                    <label>게스트 ID:</label>
+                    <input type="number" id="guestId" value="2">
+                </div>
+            </div>
+            <div>
+                <button onclick="createChatRoom()">채팅방 생성</button>
+                <button onclick="getMyChatRooms()">내 채팅방 목록</button>
+            </div>
+            <div id="apiResponse" class="api-response" style="display: none;"></div>
+        </div>
+
+        <!-- 3. WebSocket 연결 -->
+        <div class="section">
+            <h3>3️⃣ WebSocket 연결</h3>
+            <div class="input-group">
+                <label>채팅방 ID:</label>
+                <input type="number" id="chatRoomId" value="" placeholder="위에서 생성한 채팅방 ID">
+            </div>
+            <div class="input-group">
+                <label>내 사용자 ID:</label>
+                <input type="number" id="senderId" value="" placeholder="JWT에서 추출된 사용자 ID">
+            </div>
+            <div>
+                <button id="connectBtn" onclick="connect()">WebSocket 연결</button>
+                <button id="disconnectBtn" onclick="disconnect()" disabled>연결 해제</button>
+            </div>
+        </div>
+
+        <!-- 4. 메시지 전송 -->
+        <div class="section">
+            <h3>4️⃣ 메시지 전송</h3>
+            <div class="input-group">
+                <label>메시지:</label>
+                <textarea id="messageInput" rows="3" placeholder="메시지를 입력하세요..."></textarea>
+            </div>
+            <div>
+                <button id="sendBtn" class="success" onclick="sendMessage()" disabled>전송</button>
+                <button onclick="clearMessages()">메시지 지우기</button>
+            </div>
+        </div>
+
+        <!-- 5. 메시지 -->
+        <div class="section">
+            <h3>5️⃣ 메시지</h3>
+            <div class="messages" id="messages">
+                <p style="color: #666;">메시지가 여기에 표시됩니다...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let stompClient = null;
+        let currentSubscription = null;
+        let currentUserId = null;
+
+        // 채팅방 생성
+        async function createChatRoom() {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const jwtToken = document.getElementById('jwtToken').value;
+            const matchId = document.getElementById('matchId').value;
+            const guestId = document.getElementById('guestId').value;
+
+            if (!jwtToken) {
+                alert('JWT 토큰을 입력하세요.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${apiUrl}/api/v1/chat/rooms`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': jwtToken.startsWith('Bearer ') ? jwtToken : `Bearer ${jwtToken}`
+                    },
+                    body: JSON.stringify({
+                        matchId: parseInt(matchId),
+                        guestId: parseInt(guestId)
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('chatRoomId').value = data.chatRoomId;
+                    showApiResponse(data, true);
+                    alert(`채팅방이 생성되었습니다!\n채팅방 ID: ${data.chatRoomId}`);
+                } else {
+                    showApiResponse(data, false);
+                    alert(`오류: ${data.message || '채팅방 생성 실패'}`);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('API 호출 실패: ' + error.message);
+            }
+        }
+
+        // 내 채팅방 목록 조회
+        async function getMyChatRooms() {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const jwtToken = document.getElementById('jwtToken').value;
+
+            if (!jwtToken) {
+                alert('JWT 토큰을 입력하세요.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${apiUrl}/api/v1/chat/rooms/my`, {
+                    headers: {
+                        'Authorization': jwtToken.startsWith('Bearer ') ? jwtToken : `Bearer ${jwtToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showApiResponse(data, true);
+                    if (data.rooms && data.rooms.length > 0) {
+                        document.getElementById('chatRoomId').value = data.rooms[0].chatRoomId;
+                        alert(`채팅방 ${data.rooms.length}개를 찾았습니다!`);
+                    } else {
+                        alert('채팅방이 없습니다.');
+                    }
+                } else {
+                    showApiResponse(data, false);
+                    alert(`오류: ${data.message || '채팅방 조회 실패'}`);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('API 호출 실패: ' + error.message);
+            }
+        }
+
+        function showApiResponse(data, success) {
+            const responseDiv = document.getElementById('apiResponse');
+            responseDiv.style.display = 'block';
+            responseDiv.style.color = success ? '#155724' : '#721c24';
+            responseDiv.textContent = JSON.stringify(data, null, 2);
+        }
+
+        // WebSocket 연결
+        function connect() {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const chatRoomId = document.getElementById('chatRoomId').value;
+            const senderId = document.getElementById('senderId').value;
+
+            if (!chatRoomId) {
+                alert('채팅방 ID를 입력하세요.');
+                return;
+            }
+
+            if (!senderId) {
+                alert('사용자 ID를 입력하세요.');
+                return;
+            }
+
+            currentUserId = parseInt(senderId);
+
+            // SockJS는 http:// 또는 https:// URL을 받아서 자동으로 WebSocket으로 변환
+            const sockJsUrl = apiUrl + '/ws-stomp';
+            console.log('SockJS 연결 시도:', sockJsUrl);
+
+            const socket = new SockJS(sockJsUrl);
+            stompClient = Stomp.over(socket);
+
+            // 디버그 로그 활성화
+            stompClient.debug = function(str) {
+                console.log('STOMP DEBUG: ' + str);
+            };
+
+            console.log('STOMP 연결 시작...');
+            stompClient.connect({}, function(frame) {
+                console.log('STOMP 연결 성공:', frame);
+                updateConnectionStatus(true);
+
+                // 채팅방 구독 (RabbitMQ STOMP에서는 슬래시 대신 점 사용)
+                const topicPath = '/topic/chatroom.' + chatRoomId;
+                console.log('채팅방 구독:', topicPath);
+
+                currentSubscription = stompClient.subscribe(topicPath, function(message) {
+                    console.log('메시지 수신:', message);
+                    const receivedMessage = JSON.parse(message.body);
+                    displayMessage(receivedMessage);
+                });
+
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('disconnectBtn').disabled = false;
+                document.getElementById('sendBtn').disabled = false;
+
+                alert('WebSocket 연결 성공!');
+            }, function(error) {
+                console.error('STOMP 연결 실패:', error);
+                updateConnectionStatus(false);
+                alert('연결 실패: ' + JSON.stringify(error));
+            });
+        }
+
+        function disconnect() {
+            if (stompClient !== null) {
+                if (currentSubscription) {
+                    currentSubscription.unsubscribe();
+                }
+                stompClient.disconnect();
+                stompClient = null;
+            }
+            updateConnectionStatus(false);
+            document.getElementById('connectBtn').disabled = false;
+            document.getElementById('disconnectBtn').disabled = true;
+            document.getElementById('sendBtn').disabled = true;
+        }
+
+        function sendMessage() {
+            const chatRoomId = document.getElementById('chatRoomId').value;
+            const senderId = document.getElementById('senderId').value;
+            const message = document.getElementById('messageInput').value;
+
+            if (!message.trim()) {
+                alert('메시지를 입력하세요.');
+                return;
+            }
+
+            const messageObj = {
+                chatRoomId: parseInt(chatRoomId),
+                senderId: parseInt(senderId),
+                message: message
+            };
+
+            stompClient.send('/app/chat.send', {}, JSON.stringify(messageObj));
+            document.getElementById('messageInput').value = '';
+        }
+
+        function displayMessage(message) {
+            const messagesDiv = document.getElementById('messages');
+
+            // 첫 메시지인 경우 안내 문구 제거
+            if (messagesDiv.children.length === 1 && messagesDiv.children[0].tagName === 'P') {
+                messagesDiv.innerHTML = '';
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+
+            // 내 메시지인지 확인
+            if (message.senderId === currentUserId) {
+                messageDiv.classList.add('my-message');
+            }
+
+            const time = new Date(message.createdAt).toLocaleTimeString('ko-KR');
+
+            messageDiv.innerHTML = `
+                <div class="sender">${message.senderNickname} (ID: ${message.senderId})</div>
+                <div>${message.message}</div>
+                <div class="time">${time}</div>
+            `;
+
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function clearMessages() {
+            document.getElementById('messages').innerHTML = '<p style="color: #666;">메시지가 여기에 표시됩니다...</p>';
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusDiv = document.getElementById('connectionStatus');
+            if (connected) {
+                statusDiv.className = 'connection-status connected';
+                statusDiv.textContent = '✅ WebSocket 연결됨';
+            } else {
+                statusDiv.className = 'connection-status disconnected';
+                statusDiv.textContent = '❌ 연결 안됨';
+            }
+        }
+
+        // Enter 키로 메시지 전송
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // 페이지 로드 시 localStorage에서 JWT 토큰 자동 로드
+        window.addEventListener('DOMContentLoaded', function() {
+            const TOKEN_KEY = 'accessToken';
+            const token = localStorage.getItem(TOKEN_KEY);
+
+            if (token) {
+                // JWT 토큰 자동 입력
+                document.getElementById('jwtToken').value = 'Bearer ' + token;
+
+                // JWT에서 사용자 ID 추출 시도
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    const userId = payload.sub || payload.userId || payload.id;
+
+                    if (userId) {
+                        document.getElementById('senderId').value = userId;
+                        console.log('JWT에서 사용자 ID 자동 로드:', userId);
+                    }
+                } catch (e) {
+                    console.warn('JWT 파싱 실패:', e.message);
+                }
+
+                console.log('JWT 토큰 자동 로드 완료');
+            } else {
+                console.warn('localStorage에 JWT 토큰이 없습니다. index.html에서 로그인 후 다시 시도하세요.');
+            }
+        });
+    </script>
+</body>
+</html>

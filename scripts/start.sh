@@ -131,7 +131,7 @@ fi
 
 # 애플리케이션 시작 대기 (최대 60초)
 for i in {1..60}; do
-    if curl -s http://localhost:8080/actuator/health > /dev/null 2>&1; then
+    if curl -s http://localhost:8080/internal/health > /dev/null 2>&1; then
         echo "Application started successfully!"
         exit 0
     fi

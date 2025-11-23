@@ -48,8 +48,17 @@ spring:
             user-info-uri: https://kapi.kakao.com/v2/user/me
             user-name-attribute: id
 
+  # RabbitMQ 설정
+  rabbitmq:
+    host: ${RABBITMQ_HOST}
+    port: ${RABBITMQ_PORT}
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}
+    virtual-host: ${RABBITMQ_VHOST}
+    stomp-port: ${RABBITMQ_STOMP_PORT}
+
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${SERVER_PORT}
 
 # JWT 설정
 jwt:

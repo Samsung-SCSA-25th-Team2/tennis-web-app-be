@@ -51,7 +51,9 @@ public class SecurityConfig {
                         .requestMatchers("/login", "/login/**").permitAll() // 로그인 페이지 접근 허용
                         .requestMatchers("/auth/**").permitAll() // OAuth2 콜백 페이지 접근 허용
                         .requestMatchers("/api/v1/auth/status", "/api/v1/auth/logout", "/api/v1/auth/refresh").permitAll() // 토큰 재발급은 누구나 가능
-                        // Actuator health check 경로 (CodeDeploy, ALB 헬스체크용)
+                        // Internal health check 경로 (CodeDeploy, ALB 헬스체크 전용)
+                        .requestMatchers("/internal/health").permitAll()
+                        // Actuator health check 경로
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         // Swagger UI 경로
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()

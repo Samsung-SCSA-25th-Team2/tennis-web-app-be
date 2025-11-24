@@ -48,3 +48,7 @@ out/
 .env.*.local
 #application-secret.yml
 #application-local.yml
+
+### 로그 파일 ###
+logs/
+*.log

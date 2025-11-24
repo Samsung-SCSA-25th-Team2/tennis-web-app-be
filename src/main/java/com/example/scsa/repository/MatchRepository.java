@@ -32,7 +32,7 @@ import java.util.Set;
  * - fetch join + pagination 사용 시 countQuery 필수 분리
  */
 @Repository
-public interface MatchRepository extends JpaRepository<Match, Long> {
+public interface MatchRepository extends JpaRepository<Match, Long>, MatchRepositoryCustom {
 
     /**
      * 모집중인 매치 목록 조회 - 전체 (N+1 방지: host fetch join)

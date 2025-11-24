@@ -29,6 +29,7 @@ public enum ErrorCode {
 
     // Match
     MATCH_NOT_FOUND(HttpStatus.NOT_FOUND, "MATCH-001", "존재하지 않는 경기입니다."),
+    INVALID_MATCH_SEARCH_PARAMETER(HttpStatus.BAD_REQUEST, "MATCH-002", "잘못된 매치 검색"),
 
     //Chat
     CHAT_ROOM_ALREADY_EXISTS(HttpStatus.CONFLICT, "CHAT-001", "이미 존재하는 채팅방입니다."),

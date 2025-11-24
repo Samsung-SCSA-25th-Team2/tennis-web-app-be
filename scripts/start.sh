@@ -14,15 +14,17 @@ echo "Directory contents:"
 ls -la
 
 # 환경변수 파일 로드
-ENV_FILE=$APP_DIR/.env.prod
-if [ -f "$ENV_FILE" ]; then
-    echo "Loading environment variables from $ENV_FILE"
+ENV_FILE_PATH=$APP_DIR/.env.prod
+if [ -f "$ENV_FILE_PATH" ]; then
+    echo "Loading environment variables from $ENV_FILE_PATH"
     set -a  # 모든 변수를 자동으로 export
-    source $ENV_FILE
+    source $ENV_FILE_PATH
     set +a
-    echo "Environment variables loaded successfully"
+    # Java 애플리케이션에게 어떤 .env 파일을 사용할지 알림
+    export ENV_FILE=.env.prod
+    echo "Environment variables loaded successfully (ENV_FILE=.env.prod)"
 else
-    echo "Warning: Environment file not found at $ENV_FILE"
+    echo "Warning: Environment file not found at $ENV_FILE_PATH"
     echo "Application will use default values from application.yml"
 fi
 

@@ -6,16 +6,17 @@ import com.example.scsa.domain.vo.MatchStatus;
 import com.example.scsa.dto.match.MatchListRequestDTO;
 import com.example.scsa.dto.match.MatchListResponseDTO;
 import com.example.scsa.dto.match.MatchSearchDTO;
-import com.example.scsa.exception.InvalidMatchQueryParameterException;
+import com.example.scsa.exception.InvalidMatchSearchParameterException;
 import com.example.scsa.repository.MatchRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -24,269 +25,456 @@ import java.util.stream.Collectors;
 @Slf4j
 public class MatchListService {
 
-    private final MatchRepository matchRepository;
-    private final static Integer DEFAULT_SIZE = 10;
-    private final static Long DEFAULT_CURSOR = 1L;
+    private static final double DEFAULT_LAT = 37.5666;   // 서울시청
+    private static final double DEFAULT_LNG = 126.9782;
 
-    @Transactional(readOnly = true)
+    private static final DateTimeFormatter ISO_DATETIME = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+
+    private final MatchRepository matchRepository;
+    private final ObjectMapper objectMapper;
+
     public MatchListResponseDTO getMatchList(MatchListRequestDTO request) {
 
-        // -------------------------
-        // 1. sort / size / 위치 파라미터 기본값 + 검증
-        // -------------------------
+        // 1) 기본값 & Validation
+        LocalDateTime now = LocalDateTime.now();
 
-        String sortRaw = request.getSort();
-        String sort; // "createdAt" | "latest" | "distance"
+        String sort = (request.getSort() == null || request.getSort().isBlank())
+                ? "createdAt"
+                : request.getSort();
 
-        if (sortRaw == null || sortRaw.isBlank()) {
-            sort = "createdAt"; // 기본값: Match 생성 시각 기준 desc
-        } else if ("latest".equalsIgnoreCase(sortRaw)) {
-            sort = "latest";
-        } else if ("distance".equalsIgnoreCase(sortRaw)) {
-            sort = "distance";
-        } else {
-            throw new InvalidMatchQueryParameterException("허용되지 않은 sort 값입니다. (latest, distance만 사용 가능)");
+        int size = (request.getSize() == null || request.getSize() <= 0)
+                ? 10
+                : request.getSize();
+
+        LocalDate startDate = (request.getStartDate() != null)
+                ? LocalDate.parse(request.getStartDate())
+                : now.toLocalDate();
+
+        LocalDate endDate = (request.getEndDate() != null)
+                ? LocalDate.parse(request.getEndDate())
+                : LocalDate.of(9999, 12, 31);
+
+        if (startDate.isAfter(endDate)) {
+            throw new InvalidMatchSearchParameterException("startDate는 endDate보다 이후일 수 없습니다.");
         }
 
-        int size = Optional.ofNullable(request.getSize()).orElse(DEFAULT_SIZE);
-        if (size <= 0) {
-            throw new InvalidMatchQueryParameterException("size는 1 이상이어야 합니다.");
+        int startHour = request.getStartTime() != null ? request.getStartTime() : 0;
+        int endHour = request.getEndTime() != null ? request.getEndTime() : 24;
+
+        if (startHour < 0 || startHour > 23 || endHour < 1 || endHour > 24 || startHour >= endHour) {
+            throw new InvalidMatchSearchParameterException("잘못된 시간 범위입니다.");
         }
 
+        LocalDateTime from = startDate.atTime(startHour, 0);
+        LocalDateTime to = endDate.atTime(endHour == 24 ? 23 : endHour, endHour == 24 ? 59 : 0);
 
-        Double userLat = request.getLatitude();
-        Double userLon = request.getLongitude();
-        Long radiusKm = request.getRadius();
-
-        // 1-1. latitude / longitude 둘 다 null 또는 둘 다 not null
-        if ((userLat == null) != (userLon == null)) { // XOR
-            throw new InvalidMatchQueryParameterException("latitude와 longitude는 둘 다 있거나 둘 다 없어야 합니다.");
+        // 항상 현재 시각 이후만 조회
+        if (from.isBefore(now)) {
+            from = now;
         }
 
-        // 1-2. radius != null → latitude/longitude 필수
-        if (radiusKm != null && (userLat == null || userLon == null)) {
-            throw new InvalidMatchQueryParameterException("radius가 존재할 때는 latitude와 longitude가 모두 필요합니다.");
-        }
-
-        // 1-3. sort=distance → latitude/longitude 필수
-        if ("distance".equals(sort) && (userLat == null || userLon == null)) {
-            throw new InvalidMatchQueryParameterException("sort=distance인 경우 latitude와 longitude는 모두 필수입니다.");
-        }
-
-        // -------------------------
-        // 2. 시간 필터(date, startTime, endTime) 파싱
-        // -------------------------
-
-        LocalDateTime startDateTime;
-        LocalDateTime endDateTime;
-
-        String dateStr = request.getDate();
-        Integer startHour = request.getStartTime() == null ? null : Integer.parseInt(request.getStartTime());
-        Integer endHour = request.getEndTime()  == null ? null : Integer.parseInt(request.getEndTime());
-
-        if (startHour != null && (startHour < 0 || startHour > 23)
-                || endHour != null && (endHour < 0 || endHour > 23)) {
-            throw new InvalidMatchQueryParameterException("startTime과 endTime은 0~23 범위의 정수여야 합니다.");
-        }
-
-        if (startHour != null && endHour != null && startHour >= endHour) {
-            throw new InvalidMatchQueryParameterException("startTime은 endTime보다 작아야 합니다.");
-        }
-
-        if (dateStr != null) {
-            LocalDate date;
-            try {
-                date = LocalDate.parse(dateStr);
-            } catch (Exception e) {
-                throw new InvalidMatchQueryParameterException("date 형식이 올바르지 않습니다. (예: 2025-11-20)");
-            }
-
-            int fromHour = (startHour != null) ? startHour : 0;
-            int toHour = (endHour != null) ? endHour : 23;
-
-            startDateTime = date.atTime(fromHour, 0);
-            endDateTime = date.atTime(toHour, 0);
-        } else {
-            // 날짜 조건이 전혀 없으면 전체 범위
-            startDateTime = LocalDateTime.of(1970, 1, 1, 0, 0);
-            endDateTime = LocalDateTime.of(2100, 12, 31, 23, 59);
-        }
-
-        // -------------------------
-        // 3. gameType / status / cursor 파싱
-        // -------------------------
-
+        // 2) gameType, status 파싱
         GameType gameType = null;
-        if (request.getGameType() != null) {
+        if (request.getGameType() != null && !request.getGameType().isBlank()) {
             try {
                 gameType = GameType.valueOf(request.getGameType());
             } catch (IllegalArgumentException e) {
-                throw new InvalidMatchQueryParameterException("지원하지 않는 gameType 입니다.");
+                throw new InvalidMatchSearchParameterException("존재하지 않는 gameType 입니다.");
             }
         }
 
-        Set<MatchStatus> statuses = parseStatuses(request.getStatus());
+        List<MatchStatus> statuses = parseStatus(request.getStatus());
 
-        // cursor: 명세상 default=1 이지만,
-        // 실제 페이지네이션에선 null이면 "첫 페이지"로 취급하는 게 자연스러워서
-        // null 그대로 넘긴다.
-        Long cursorId = request.getCursor();
+        // 3) 위치/반경 처리
+        double[] latLng = resolveLatLng(sort, request.getLatitude(), request.getLongitude());
+        double lat = latLng[0];
+        double lng = latLng[1];
 
-        // -------------------------
-        // 4. 1차 DB 조회 (시간 + gameType + status + cursor)
-        // -------------------------
+        int radius = (request.getRadius() == null || request.getRadius() <= 0)
+                ? 25
+                : request.getRadius();
 
-        List<Match> matches = matchRepository.findForList(
-                startDateTime,
-                endDateTime,
-                gameType,
-                statuses,
-                cursorId
-        );
+        // 4) 기본 필터된 매치 목록 조회
+        List<Match> matches = matchRepository.findMatchesForSearch(from, to, gameType, statuses);
 
-        // -------------------------
-        // 5. 거리(radius) 필터 + sort 기준 정렬
-        // -------------------------
-
-        if (userLat != null && userLon != null && radiusKm != null) {
-            matches = matches.stream()
-                    .filter(m -> distanceKm(
-                            userLat,
-                            userLon,
+        // 5) 거리, Score 계산
+        List<MatchWithMetrics> withMetrics = matches.stream()
+                .map(m -> {
+                    double distanceKm = calculateDistanceKm(lat, lng,
                             m.getCourt().getLatitude(),
-                            m.getCourt().getLongitude()
-                    ) <= radiusKm)
-                    .collect(Collectors.toList());
-        }
-
-        Comparator<Match> comparator = getComparator(sort, userLat, userLon);
-        matches.sort(comparator);
-
-        // -------------------------
-        // 6. 커서 페이지네이션 (size + 1 → hasNext, nextCursor)
-        // -------------------------
-
-        List<Match> limited = matches.stream()
-                .limit(size + 1L)
+                            m.getCourt().getLongitude());
+                    double score = calculateScore(sort, now, distanceKm, m.getMatchStartDateTime());
+                    return new MatchWithMetrics(m, distanceKm, score);
+                })
                 .collect(Collectors.toList());
 
-        boolean hasNext = limited.size() > size;
-        if (hasNext) {
-            limited = limited.subList(0, size);
+        // 6) radius 필터 적용
+        withMetrics = withMetrics.stream()
+                .filter(w -> w.distanceKm <= radius)
+                .collect(Collectors.toList());
+
+        // 7) 정렬
+        sortMatches(withMetrics, sort);
+
+        // 8) cursor 적용 (메모리에서 filtering)
+        if (request.getCursor() != null && !request.getCursor().isBlank()) {
+            withMetrics = applyCursorFilter(withMetrics, sort, request.getCursor());
         }
 
-        Long nextCursor = null;
-        if (hasNext && !limited.isEmpty()) {
-            nextCursor = limited.get(limited.size() - 1).getId();
+        // 9) 페이징 (size + hasNext)
+        boolean hasNext = withMetrics.size() > size;
+
+        List<MatchWithMetrics> page = withMetrics.stream()
+                .limit(size)
+                .collect(Collectors.toList());
+
+        // 10) nextCursor 생성
+        String nextCursor = null;
+        if (hasNext && !page.isEmpty()) {
+            MatchWithMetrics last = page.get(page.size() - 1);
+            nextCursor = encodeCursor(sort, last);
         }
 
-        // -------------------------
-        // 7. DTO 변환
-        // -------------------------
-
-        List<MatchSearchDTO> content = limited.stream()
-                .map(this::toDto)
+        // 11) DTO 매핑
+        List<MatchSearchDTO> content = page.stream()
+                .map(this::toSearchDTO)
                 .collect(Collectors.toList());
 
         return MatchListResponseDTO.builder()
                 .matches(content)
                 .size(Long.valueOf(content.size()))
                 .hasNext(hasNext)
-                .cursor(Optional.ofNullable(nextCursor).orElse(DEFAULT_CURSOR))
+                .cursor(nextCursor)
                 .build();
     }
 
-    // status: "RECRUITING,COMPLETED" → EnumSet
-    private Set<MatchStatus> parseStatuses(String statusParam) {
-        if (statusParam == null || statusParam.isBlank()) {
-            // 기본값: RECRUITING만
-            return EnumSet.of(MatchStatus.RECRUITING);
-        }
+    // ==========================
+    // Helper methods
+    // ==========================
 
-        String[] tokens = statusParam.split(",");
-        EnumSet<MatchStatus> set = EnumSet.noneOf(MatchStatus.class);
+    private List<MatchStatus> parseStatus(String statusParam) {
+        String value = (statusParam == null || statusParam.isBlank())
+                ? "RECRUITING"
+                : statusParam;
 
+        String[] tokens = value.split(",");
+        List<MatchStatus> result = new ArrayList<>();
         for (String token : tokens) {
             String trimmed = token.trim();
             if (trimmed.isEmpty()) continue;
             try {
-                set.add(MatchStatus.valueOf(trimmed));
+                result.add(MatchStatus.valueOf(trimmed));
             } catch (IllegalArgumentException e) {
-                throw new InvalidMatchQueryParameterException("지원하지 않는 status 값입니다: " + trimmed);
+                throw new InvalidMatchSearchParameterException("status 값이 잘못되었습니다: " + trimmed);
             }
         }
-
-        if (set.isEmpty()) {
-            throw new InvalidMatchQueryParameterException("status 파라미터가 올바르지 않습니다.");
-        }
-        return set;
+        return result;
     }
 
-    // 정렬 기준
-    private Comparator<Match> getComparator(String sort, Double lat, Double lon) {
-        if ("latest".equals(sort)) {
-            // 경기 시작 시간이 빠른 순
-            return Comparator.comparing(Match::getMatchStartDateTime)
-                    .thenComparing(Match::getId);
-        }
-
+    private double[] resolveLatLng(String sort, Double lat, Double lng) {
+        // sort=distance → lat/lng 필수
         if ("distance".equals(sort)) {
-            // 사용자 위치와의 거리 가까운 순
-            return Comparator.<Match>comparingDouble(m ->
-                            distanceKm(
-                                    lat,
-                                    lon,
-                                    m.getCourt().getLatitude(),
-                                    m.getCourt().getLongitude()
-                            )
-                    )
-                    .thenComparing(Match::getMatchStartDateTime)
-                    .thenComparing(Match::getId);
+            if (lat == null || lng == null) {
+                throw new InvalidMatchSearchParameterException("sort=distance일 때 latitude와 longitude는 필수입니다.");
+            }
+            return new double[]{lat, lng};
         }
 
-        // default: 생성 시간 최신순
-        return Comparator.comparing(Match::getCreatedAt)
-                .reversed()
-                .thenComparing(Match::getId, Comparator.reverseOrder());
+        // recommend/createdAt/latest
+        if (lat == null && lng == null) {
+            return new double[]{DEFAULT_LAT, DEFAULT_LNG};
+        }
+
+        if (lat == null || lng == null) {
+            throw new InvalidMatchSearchParameterException("latitude와 longitude는 둘 다 존재하거나 둘 다 null이어야 합니다.");
+        }
+
+        return new double[]{lat, lng};
     }
 
-    // Haversine formula (간단 버전)
-    private double distanceKm(double lat1, double lon1, double lat2, double lon2) {
-        final int R = 6371; // 지구 반지름 (km)
+    /**
+     * Haversine 거리 계산 (km)
+     */
+    private double calculateDistanceKm(double lat1, double lng1, double lat2, double lng2) {
+        final int R = 6371; // 지구 반지름(km)
         double dLat = Math.toRadians(lat2 - lat1);
-        double dLon = Math.toRadians(lon2 - lon1);
+        double dLng = Math.toRadians(lng2 - lng1);
+
         double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-                + Math.cos(Math.toRadians(lat1))
-                * Math.cos(Math.toRadians(lat2))
-                * Math.sin(dLon / 2)
-                * Math.sin(dLon / 2);
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
         return R * c;
     }
 
-    private MatchSearchDTO toDto(Match match) {
-        String statusString = switch (match.getMatchStatus()) {
+    /**
+     * recommend일 때만 Score 계산, 그 외는 0
+     */
+    private double calculateScore(String sort, LocalDateTime now, double distanceKm, LocalDateTime startDateTime) {
+        if (!"recommend".equals(sort)) {
+            return 0.0;
+        }
+
+        long minutesUntil = ChronoUnit.MINUTES.between(now, startDateTime);
+        if (minutesUntil < 0) minutesUntil = 0;
+
+        double timeScore = Math.min((double) minutesUntil / 1440.0, 1.0);
+        double distanceScore = Math.min(distanceKm / 25.0, 1.0);
+
+        return 0.7 * timeScore + 0.3 * distanceScore;
+    }
+
+    private void sortMatches(List<MatchWithMetrics> list, String sort) {
+        switch (sort) {
+            case "latest":
+                list.sort(Comparator
+                        .comparing((MatchWithMetrics m) -> m.match.getMatchStartDateTime())
+                        .thenComparing(m -> m.match.getId()));
+                break;
+            case "distance":
+                list.sort(Comparator
+                        .comparingDouble((MatchWithMetrics m) -> m.distanceKm)
+                        .thenComparing(m -> m.match.getId()));
+                break;
+            case "recommend":
+                list.sort(Comparator
+                        .comparingDouble((MatchWithMetrics m) -> m.score)
+                        .thenComparing(m -> m.match.getId()));
+                break;
+            case "createdAt":
+            default:
+                list.sort(Comparator
+                        .comparing((MatchWithMetrics m) -> m.match.getCreatedAt())
+                        .thenComparing(m -> m.match.getId()));
+        }
+    }
+
+    /**
+     * cursor 이후 데이터만 남기는 필터 (메모리 상)
+     */
+    private List<MatchWithMetrics> applyCursorFilter(List<MatchWithMetrics> list,
+                                                     String sort,
+                                                     String cursorBase64) {
+
+        try {
+            String json = new String(Base64.getDecoder().decode(cursorBase64));
+
+            int startIndex = 0;
+
+            switch (sort) {
+                case "latest": {
+                    LatestCursor c = objectMapper.readValue(json, LatestCursor.class);
+                    LocalDateTime cursorStart = LocalDateTime.parse(c.startDateTime);
+                    Long cursorId = c.id;
+
+                    for (int i = 0; i < list.size(); i++) {
+                        MatchWithMetrics m = list.get(i);
+                        LocalDateTime start = m.match.getMatchStartDateTime();
+                        if (start.isAfter(cursorStart)
+                                || (start.equals(cursorStart) && m.match.getId() > cursorId)) {
+                            startIndex = i;
+                            break;
+                        }
+                    }
+                    break;
+                }
+                case "distance": {
+                    DistanceCursor c = objectMapper.readValue(json, DistanceCursor.class);
+                    double cursorDist = c.distance;
+                    long cursorId = c.id;
+
+                    for (int i = 0; i < list.size(); i++) {
+                        MatchWithMetrics m = list.get(i);
+                        if (m.distanceKm > cursorDist
+                                || (Double.compare(m.distanceKm, cursorDist) == 0 && m.match.getId() > cursorId)) {
+                            startIndex = i;
+                            break;
+                        }
+                    }
+                    break;
+                }
+                case "recommend": {
+                    RecommendCursor c = objectMapper.readValue(json, RecommendCursor.class);
+                    double cursorScore = c.score;
+                    long cursorId = c.id;
+
+                    for (int i = 0; i < list.size(); i++) {
+                        MatchWithMetrics m = list.get(i);
+                        if (m.score > cursorScore
+                                || (Double.compare(m.score, cursorScore) == 0 && m.match.getId() > cursorId)) {
+                            startIndex = i;
+                            break;
+                        }
+                    }
+                    break;
+                }
+                case "createdAt":
+                default: {
+                    CreatedAtCursor c = objectMapper.readValue(json, CreatedAtCursor.class);
+                    LocalDateTime cursorCreatedAt = LocalDateTime.parse(c.createdAt);
+                    long cursorId = c.id;
+
+                    for (int i = 0; i < list.size(); i++) {
+                        MatchWithMetrics m = list.get(i);
+                        LocalDateTime created = m.match.getCreatedAt();
+                        if (created.isAfter(cursorCreatedAt)
+                                || (created.equals(cursorCreatedAt) && m.match.getId() > cursorId)) {
+                            startIndex = i;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (startIndex <= 0) {
+                return list;
+            }
+            return list.subList(startIndex, list.size());
+
+        } catch (Exception e) {
+            throw new InvalidMatchSearchParameterException("잘못된 cursor 값입니다.", e);
+        }
+    }
+
+    /**
+     * 마지막 요소 기준으로 cursor JSON → Base64 생성
+     */
+    private String encodeCursor(String sort, MatchWithMetrics last) {
+        try {
+            String json;
+
+            switch (sort) {
+                case "latest": {
+                    LatestCursor c = new LatestCursor(
+                            last.match.getMatchStartDateTime().format(ISO_DATETIME),
+                            last.match.getId()
+                    );
+                    json = objectMapper.writeValueAsString(c);
+                    break;
+                }
+                case "distance": {
+                    DistanceCursor c = new DistanceCursor(last.distanceKm, last.match.getId());
+                    json = objectMapper.writeValueAsString(c);
+                    break;
+                }
+                case "recommend": {
+                    RecommendCursor c = new RecommendCursor(last.score, last.match.getId());
+                    json = objectMapper.writeValueAsString(c);
+                    break;
+                }
+                case "createdAt":
+                default: {
+                    CreatedAtCursor c = new CreatedAtCursor(
+                            last.match.getCreatedAt().format(ISO_DATETIME),
+                            last.match.getId()
+                    );
+                    json = objectMapper.writeValueAsString(c);
+                }
+            }
+
+            return Base64.getEncoder().encodeToString(json.getBytes());
+
+        } catch (Exception e) {
+            throw new IllegalStateException("cursor 생성 중 오류가 발생했습니다.", e);
+        }
+    }
+
+    /**
+     * Entity → Response DTO 매핑
+     */
+    private MatchSearchDTO toSearchDTO(MatchWithMetrics w) {
+        Match m = w.match;
+
+        return MatchSearchDTO.builder()
+                .matchId(m.getId())
+                .hostId(m.getHost().getId())
+                .startDateTime(m.getMatchStartDateTime().format(ISO_DATETIME))
+                .endDateTime(m.getMatchEndDateTime().format(ISO_DATETIME))
+                .gameType(m.getGameType().name())
+                .courtId(m.getCourt().getId())
+                .fee(m.getFee())
+                // 아래 두 줄은 실제 엔티티 구조에 맞게 수정
+                .period(m.getPeriods().stream().map(Enum::name).collect(Collectors.toList()))
+                .playerCountMen(m.getPlayerCountMen())
+                .playerCountWomen(m.getPlayerCountWomen())
+                .ageRange(m.getAges().stream().map(Enum::name).collect(Collectors.toList()))
+                .status(mapStatus(m.getMatchStatus()))
+                .createdAt(m.getCreatedAt().format(ISO_DATETIME))
+                .build();
+    }
+
+    private String mapStatus(MatchStatus status) {
+        // 명세: 응답 status는 OPEN/CLOSED로 내려가는 예시
+        return switch (status) {
             case RECRUITING -> "OPEN";
             case COMPLETED -> "CLOSED";
         };
+    }
 
-        DateTimeFormatter iso = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+    // ==========================
+    // 내부용 래퍼 & 커서 DTO
+    // ==========================
 
-        return MatchSearchDTO.builder()
-                .matchId(match.getId())
-                .hostId(match.getHost().getId())
-                .startDateTime(match.getMatchStartDateTime().format(iso))
-                .endDateTime(match.getMatchEndDateTime().format(iso))
-                .gameType(match.getGameType().name())
-                .courtId(match.getCourt().getId())
-                // 나머지 필드는 네 엔티티에 맞게 채워도 되고, 일단 null/0으로 둬도 됨
-                .period(match.getPeriods().stream().map(p -> p.name()).toList())
-                .playerCountMen(match.getPlayerCountMen())
-                .playerCountWomen(match.getPlayerCountWomen())
-                .ageRange(match.getAges().stream().map(a -> a.name()).toList())
-                .status(statusString)
-                .createdAt(match.getCreatedAt().format(iso))
-                .fee(match.getFee())
-                .build();
+    private static class MatchWithMetrics {
+        private final Match match;
+        private final double distanceKm;
+        private final double score;
+
+        private MatchWithMetrics(Match match, double distanceKm, double score) {
+            this.match = match;
+            this.distanceKm = distanceKm;
+            this.score = score;
+        }
+    }
+
+    private static class CreatedAtCursor {
+        public String createdAt;
+        public Long id;
+
+        public CreatedAtCursor() { }
+
+        public CreatedAtCursor(String createdAt, Long id) {
+            this.createdAt = createdAt;
+            this.id = id;
+        }
+    }
+
+    private static class LatestCursor {
+        public String startDateTime;
+        public Long id;
+
+        public LatestCursor() { }
+
+        public LatestCursor(String startDateTime, Long id) {
+            this.startDateTime = startDateTime;
+            this.id = id;
+        }
+    }
+
+    private static class DistanceCursor {
+        public double distance;
+        public Long id;
+
+        public DistanceCursor() { }
+
+        public DistanceCursor(double distance, Long id) {
+            this.distance = distance;
+            this.id = id;
+        }
+    }
+
+    private static class RecommendCursor {
+        public double score;
+        public Long id;
+
+        public RecommendCursor() {
+        }
+
+        public RecommendCursor(double score, Long id) {
+            this.score = score;
+            this.id = id;
+        }
     }
 }

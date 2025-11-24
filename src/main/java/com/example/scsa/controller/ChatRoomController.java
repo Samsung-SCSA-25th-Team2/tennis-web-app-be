@@ -1,13 +1,10 @@
 package com.example.scsa.controller;
 
-import com.example.scsa.dto.chat.ChatRoomCreateRequestDTO;
-import com.example.scsa.dto.chat.ChatRoomCreateResponseDTO;
-import com.example.scsa.dto.chat.ChatRoomListRequestDTO;
-import com.example.scsa.dto.chat.ChatRoomListResponseDTO;
+import com.example.scsa.dto.chat.*;
 import com.example.scsa.dto.response.ErrorResponse;
-import com.example.scsa.exception.ChatRoomAlreadyExistsException;
-import com.example.scsa.exception.UserDeleteNotAllowedException;
-import com.example.scsa.exception.UserNotFoundException;
+import com.example.scsa.exception.*;
+import com.example.scsa.service.chat.ChatHistoryService;
+import com.example.scsa.service.chat.ChatReadService;
 import com.example.scsa.service.chat.ChatRoomService;
 import com.example.scsa.dto.auth.CustomOAuth2User;
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,6 +32,8 @@ import org.springframework.web.bind.annotation.*;
 public class ChatRoomController {
 
     private final ChatRoomService chatRoomService;
+    private final ChatReadService chatReadService;
+    private final ChatHistoryService chatHistoryService;
 
     @Operation(
         summary = "채팅방 생성",
@@ -151,5 +150,92 @@ public class ChatRoomController {
                     .body(ErrorResponse.of("서버 오류가 발생했습니다.", "INTERNAL_SERVER_ERROR"));
         }
 
+    }
+
+    @PatchMapping("/{chatRoomId}/read")
+    public ResponseEntity<?> markMessagesAsRead(
+            @PathVariable Long chatRoomId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
+            return ResponseEntity.status(401)
+                    .body(ErrorResponse.of("인증되지 않은 사용자입니다.", "UNAUTHORIZED"));
+        }
+
+        try {
+            Long currentUserId = Long.parseLong(authentication.getName());
+            log.info("메세지 읽음 처리 요청 - userId: {}, chatRoomId: {}", currentUserId, chatRoomId);
+
+            ChatReadResponseDTO response =  chatReadService.markAllAsRead(chatRoomId, currentUserId);
+            log.info("메세지 읽음 처리 성공 - userId: {}, chatRoomId: {}", currentUserId, chatRoomId);
+
+            return ResponseEntity.ok(response);
+        } catch (NumberFormatException e) {
+            log.error("잘못된 사용자 ID 형식: {}", authentication.getName());
+            return ResponseEntity.status(400)
+                    .body(ErrorResponse.of("잘못된 사용자 ID입니다.", "INVALID_USER_ID"));
+        } catch (ChatRoomAccessDeniedException e) {
+            log.error("채팅방 접근 권한 없음");
+            return ResponseEntity.status(403)
+                    .body(ErrorResponse.of("채팅방 접근 권한이 없습니다", "CHAT_ROOM_ACCESS_DENIED"));
+        } catch (ChatRoomNotFoundException e) {
+            log.error("채팅방이 존재하지 않음");
+            return ResponseEntity.status(404)
+                    .body(ErrorResponse.of("채팅방이 존재하지 않습니다", "CHAT_ROOM_NOT_FOUND"));
+        } catch(Exception e) {
+            log.error("채팅방 조회 실패 - 서버 오류: {}", e.getMessage(), e);
+            return ResponseEntity.status(500)
+                    .body(ErrorResponse.of("서버 오류가 발생했습니다.", "INTERNAL_SERVER_ERROR"));
+        }
+    }
+
+    @GetMapping("/{roomId}/messages")
+    public ResponseEntity<?> getChatMessages(
+            @PathVariable Long roomId,
+            @RequestParam(required = false) String cursor,
+            @RequestParam(required = false, defaultValue = "20") Integer size
+    ) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
+            return ResponseEntity.status(401)
+                    .body(ErrorResponse.of("인증되지 않은 사용자입니다.", "UNAUTHORIZED"));
+        }
+
+        try {
+            Long currentUserId = Long.parseLong(authentication.getName());
+
+            ChatHistoryRequestDTO request = new ChatHistoryRequestDTO(roomId,cursor,size);
+
+            log.info("과거 메세지 조회 요청 - userId: {}, chatRoomId: {}", currentUserId, request.getChatRoomId());
+
+            ChatHistoryResponseDTO response =  chatHistoryService.getChatHistory(request.getChatRoomId(),request,currentUserId);
+            log.info("과거 메세지 조회 성공 - userId: {}, chatRoomId: {}", currentUserId, request.getChatRoomId());
+
+            return ResponseEntity.ok(response);
+        } catch (NumberFormatException e) {
+            log.error("잘못된 사용자 ID 형식: {}", authentication.getName());
+            return ResponseEntity.status(400)
+                    .body(ErrorResponse.of("잘못된 사용자 ID입니다.", "INVALID_USER_ID"));
+        } catch (InvalidCursorFormatException e) {
+            log.error("잘못된 커서 형식: {}", cursor);
+            return ResponseEntity.status(400)
+                    .body(ErrorResponse.of("잘못된 커서 형식입니다.", "INVALID_CURSOR_FORMAT"));
+        } catch (ChatRoomAccessDeniedException e) {
+            log.error("채팅방 접근 권한 없음");
+            return ResponseEntity.status(403)
+                    .body(ErrorResponse.of("채팅방 접근 권한이 없습니다", "CHAT_ROOM_ACCESS_DENIED"));
+        } catch (ChatRoomNotFoundException e) {
+            log.error("채팅방이 존재하지 않음");
+            return ResponseEntity.status(404)
+                    .body(ErrorResponse.of("채팅방이 존재하지 않습니다", "CHAT_ROOM_NOT_FOUND"));
+        } catch(Exception e) {
+            log.error("채팅방 조회 실패 - 서버 오류: {}", e.getMessage(), e);
+            return ResponseEntity.status(500)
+                    .body(ErrorResponse.of("서버 오류가 발생했습니다.", "INTERNAL_SERVER_ERROR"));
+        }
     }
 }

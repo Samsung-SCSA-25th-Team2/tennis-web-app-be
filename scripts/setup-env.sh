@@ -52,3 +52,6 @@ for var in "${REQUIRED_VARS[@]}"; do
 done
 
 echo "✓ All required variables validated successfully"
+
+# ENV_FILE 환경변수를 .bashrc에 설정 (애플리케이션이 참조할 수 있도록)
+echo "export ENV_FILE=.env.prod" >> /home/ec2-user/.bashrc

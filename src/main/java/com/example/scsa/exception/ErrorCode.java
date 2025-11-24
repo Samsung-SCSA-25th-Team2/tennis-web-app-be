@@ -35,6 +35,7 @@ public enum ErrorCode {
     INVALID_CHAT_MESSAGE(HttpStatus.BAD_REQUEST, "CHAT-002", "잘못된 채팅 메시지입니다."),
     CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT-003", "존재하지 않는 채팅방입니다."),
     CHAT_ROOM_ACCESS_DENIED(HttpStatus.FORBIDDEN, "CHAT-004","채팅방에 접근할 권한이 없습니다."),
+    INVALID_CURSOR_FORMAT(HttpStatus.BAD_REQUEST, "CHAT-005", "잘못된 커서 형식입니다."),
 
     // Auth
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH-001", "유효하지 않은 토큰입니다."),

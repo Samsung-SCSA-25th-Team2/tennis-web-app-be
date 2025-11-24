@@ -204,4 +204,23 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
                            @Param("currentUserId") Long currentUserId,
                            @Param("readAt") LocalDateTime readAt);
 
+    /**
+     * 특정 채팅방에서, 현재 사용자(currentUserId)가 보낸 메시지
+     * @param roomId 채팅방 ID
+     * @param cursor 커서
+     * @param limit  메세지 가져올 개수
+     * @return 채팅 리스트
+     */
+    @Query(value = """
+        SELECT *
+          FROM chat
+         WHERE chat_room_id = :roomId
+           AND (:cursor IS NULL OR created_at < :cursor)
+         ORDER BY created_at DESC
+         LIMIT :limit
+        """, nativeQuery = true)
+    List<Chat> findChatsByRoomWithCursor(
+            @Param("roomId") Long roomId,
+            @Param("cursor") LocalDateTime cursor,
+            @Param("limit") int limit);
 }

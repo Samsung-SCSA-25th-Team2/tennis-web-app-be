@@ -14,5 +14,5 @@ public class MatchListResponseDTO {
 
     private Long size;
     private Boolean hasNext;
-    private Long cursor;
+    private String cursor;
 }

@@ -2,6 +2,7 @@ package com.example.scsa.controller;
 
 import com.example.scsa.dto.match.*;
 import com.example.scsa.dto.response.ErrorResponse;
+import com.example.scsa.exception.InvalidMatchSearchParameterException;
 import com.example.scsa.exception.MatchAccessDeniedException;
 import com.example.scsa.exception.MatchNotFoundException;
 import com.example.scsa.service.match.MatchListService;
@@ -117,7 +118,18 @@ public class MatchController {
     }
 
     @GetMapping
-    public MatchListResponseDTO getMatches(@ModelAttribute MatchListRequestDTO request) {
-        return matchListService.getMatchList(request);
+    public ResponseEntity<?> getMatches(@ModelAttribute MatchListRequestDTO request) {
+        try {
+            MatchListResponseDTO response = matchListService.getMatchList(request);
+            return ResponseEntity.ok(response);
+        } catch(InvalidMatchSearchParameterException e){
+            log.error("잘못된 매치 조회 : {}",e.getMessage(), e);
+            return ResponseEntity.status(400)
+                    .body(ErrorResponse.of("잘못된 매치 조회", "INVALID_MATCH_SEARCH_PARAMETER"));
+        } catch(Exception e){
+            log.error("매치 조회 실패 - 서버오류 : {}",  e.getMessage(), e);
+            return ResponseEntity.status(500)
+                    .body(ErrorResponse.of("서버 내부 오류가 발생했습니다.", "INTERNAL_SERVER_ERROR"));
+        }
     }
 }

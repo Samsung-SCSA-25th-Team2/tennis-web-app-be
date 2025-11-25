@@ -167,7 +167,7 @@ public class AuthController {
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping("/refresh")
-    public ResponseEntity<?> refresh(HttpServletRequest request) {
+    public ResponseEntity<?> refresh(HttpServletRequest request, HttpServletResponse response) {
         try {
             // 쿠키에서 Refresh Token 가져오기
             String refreshToken = getRefreshTokenFromCookie(request);
@@ -199,11 +199,18 @@ public class AuthController {
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
-            // 새로운 Access Token 발급
+            // 새로운 Access Token 및 Refresh Token 발급
             String newAccessToken = jwtUtil.generateAccessToken(userId, user.getRole().name());
+            String newRefreshToken = jwtUtil.generateRefreshToken(userId);
 
-            log.info("Access Token 재발급 성공 - userId: {}", userId);
-            return ResponseEntity.ok(TokenResponse.of(newAccessToken, null, jwtUtil.getAccessTokenExpiration()));
+            // Redis에 새로운 Refresh Token 저장
+            refreshTokenService.saveRefreshToken(userId, newRefreshToken, jwtUtil.getRefreshTokenExpiration());
+
+            // 쿠키에 새로운 Refresh Token 설정
+            addRefreshTokenCookie(response, newRefreshToken);
+
+            log.info("Access Token 및 Refresh Token 재발급 성공 - userId: {}", userId);
+            return ResponseEntity.ok(TokenResponse.of(newAccessToken, newRefreshToken, jwtUtil.getAccessTokenExpiration()));
 
         } catch (Exception e) {
             log.error("Access Token 재발급 실패: {}", e.getMessage());

@@ -34,7 +34,6 @@ public class UserProfileService {
                 .gender(user.getGender().toString())
                 .age(user.getAge().toString())
                 .imgUrl(user.getImgUrl())
-                .name(user.getName())
                 .build();
     }
 

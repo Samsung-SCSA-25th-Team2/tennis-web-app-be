@@ -9,10 +9,7 @@ import com.example.scsa.domain.vo.MatchStatus;
 import com.example.scsa.domain.vo.Period;
 import com.example.scsa.dto.match.MatchDTO;
 import com.example.scsa.dto.match.MatchResponseDTO;
-import com.example.scsa.exception.CourtNotFoundException;
-import com.example.scsa.exception.MatchAccessDeniedException;
-import com.example.scsa.exception.MatchNotFoundException;
-import com.example.scsa.exception.UserNotFoundException;
+import com.example.scsa.exception.*;
 import com.example.scsa.repository.CourtRepository;
 import com.example.scsa.repository.MatchRepository;
 import com.example.scsa.repository.UserRepository;
@@ -82,5 +79,39 @@ public class MatchService {
         }
 
         matchRepository.delete(match);
+    }
+
+    @Transactional
+    public MatchResponseDTO changeMatchStatus(Long matchId, Long currentUserId) {
+        Match match = matchRepository.findById(matchId)
+                .orElseThrow(() -> new MatchNotFoundException(matchId));
+
+        // 제약 1: 본인이 작성한 매치인지 확인 (host만 변경 가능)
+        if (!match.getHost().getId().equals(currentUserId)) {
+            throw new MatchAccessDeniedException(matchId, currentUserId);
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        MatchStatus currentStatus = match.getMatchStatus();
+
+        // 제약 2:
+        //  - 매치 시작 시간이 현재보다 이전인데
+        //  - 현재 상태가 COMPLETED라면, 다시 RECRUITING으로 되돌리는 것은 금지
+        if (match.getMatchStartDateTime().isBefore(now)
+                && currentStatus == MatchStatus.COMPLETED) {
+            throw new InvalidMatchStatusChangeException(
+                    "이미 시작된 매치는 COMPLETED → RECRUITING으로 변경할 수 없습니다."
+            );
+        }
+
+        // 토글 로직: RECRUITING <-> COMPLETED
+        MatchStatus newStatus =
+                (currentStatus == MatchStatus.RECRUITING)
+                        ? MatchStatus.COMPLETED
+                        : MatchStatus.RECRUITING;
+
+        match.updateMatchStatus(newStatus); // JPA 더티체킹으로 업데이트
+
+        return new MatchResponseDTO(matchId, "매치가 성공적으로 변경되었습니다.");
     }
 }

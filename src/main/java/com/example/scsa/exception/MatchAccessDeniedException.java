@@ -16,4 +16,8 @@ public class MatchAccessDeniedException extends RuntimeException {
     public MatchAccessDeniedException(Long matchId) {
         super("접근 권한이 없습니다. (ID: " + matchId + ")");
     }
+
+    public MatchAccessDeniedException(Long matchId, Long userId) {
+        super("접근 권한이 없습니다. (ID: " + matchId + ", userId: " + userId + ")");
+    }
 }

@@ -174,4 +174,6 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
             @Param("userId") Long userId,
             @Param("cursor") LocalDateTime cursor
     );
+
+    void deleteByMatchId(Long matchId);
 }

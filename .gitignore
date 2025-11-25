@@ -49,5 +49,6 @@ out/
 #application-secret.yml
 #application-local.yml
 
+### 로그 ###
 /logs
 *.log

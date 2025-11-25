@@ -3,12 +3,15 @@ package com.example.scsa.controller;
 
 import com.example.scsa.dto.profile.UserProfileDTO;
 import com.example.scsa.dto.profile.UserProfileDeleteResponseDTO;
+import com.example.scsa.dto.request.PresignedUrlRequest;
 import com.example.scsa.dto.request.ProfileCompleteRequest;
 import com.example.scsa.dto.response.ErrorResponse;
+import com.example.scsa.dto.response.PresignedUrlResponse;
 import com.example.scsa.dto.response.ProfileCompleteResponse;
 import com.example.scsa.exception.UserDeleteNotAllowedException;
 import com.example.scsa.exception.UserNotFoundException;
 import com.example.scsa.repository.UserRepository;
+import com.example.scsa.service.S3Service;
 import com.example.scsa.service.UserService;
 import com.example.scsa.service.profile.UserProfileService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -40,6 +43,7 @@ public class UserProfileController {
     private final UserRepository userRepository;
     private final UserProfileService userProfileService;
     private final UserService userService;
+    private final S3Service s3Service;
 
     /**
      * 프로필 완성 API
@@ -130,6 +134,59 @@ public class UserProfileController {
             @Parameter(description = "사용자 ID", required = true) @PathVariable("user_id") Long userId) {
         UserProfileDTO result = userProfileService.getUserProfile(userId);
         return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 프로필 이미지 업로드용 Presigned URL 생성
+     * POST /api/v1/users/me/profile-image/presigned-url
+     */
+    @Operation(summary = "프로필 이미지 업로드용 Presigned URL 생성",
+            description = "S3에 프로필 이미지를 업로드하기 위한 Presigned URL을 생성합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Presigned URL 생성 성공",
+                    content = @Content(schema = @Schema(implementation = PresignedUrlResponse.class))),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청 (지원하지 않는 파일 형식 등)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "500", description = "서버 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @PostMapping("/me/profile-image/presigned-url")
+    public ResponseEntity<?> generatePresignedUrl(@Valid @RequestBody PresignedUrlRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
+            return ResponseEntity.status(401)
+                    .body(ErrorResponse.of("인증되지 않은 사용자입니다.", "UNAUTHORIZED"));
+        }
+
+        try {
+            Long userId = Long.parseLong(authentication.getName());
+            log.info("Presigned URL 생성 요청 - userId: {}, fileName: {}, fileType: {}",
+                    userId, request.getFileName(), request.getFileType());
+
+            PresignedUrlResponse response = s3Service.generatePresignedUrl(userId, request);
+
+            log.info("Presigned URL 생성 성공 - userId: {}, imageUrl: {}", userId, response.getImageUrl());
+            return ResponseEntity.ok(response);
+
+        } catch (NumberFormatException e) {
+            log.error("잘못된 사용자 ID 형식: {}", authentication.getName());
+            return ResponseEntity.status(400)
+                    .body(ErrorResponse.of("잘못된 사용자 ID입니다.", "INVALID_USER_ID"));
+
+        } catch (IllegalArgumentException e) {
+            log.warn("Presigned URL 생성 실패 - 잘못된 요청: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ErrorResponse.of(e.getMessage(), "INVALID_REQUEST"));
+
+        } catch (Exception e) {
+            log.error("Presigned URL 생성 실패 - 서버 오류: {}", e.getMessage(), e);
+            return ResponseEntity.status(500)
+                    .body(ErrorResponse.of("Presigned URL 생성에 실패했습니다.", "INTERNAL_SERVER_ERROR"));
+        }
     }
 
     /**

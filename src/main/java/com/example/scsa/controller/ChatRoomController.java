@@ -210,6 +210,7 @@ public class ChatRoomController {
 
             ChatHistoryRequestDTO request = new ChatHistoryRequestDTO(roomId,cursor,size);
 
+            log.info("요청 URI: /api/v1/chat/rooms/{}/messages", roomId);
             log.info("과거 메세지 조회 요청 - userId: {}, chatRoomId: {}", currentUserId, request.getChatRoomId());
 
             ChatHistoryResponseDTO response =  chatHistoryService.getChatHistory(request.getChatRoomId(),request,currentUserId);

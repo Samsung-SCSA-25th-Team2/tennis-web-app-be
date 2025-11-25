@@ -191,4 +191,11 @@ public interface MatchGuestRepository extends JpaRepository<MatchGuest, Long> {
         Pageable pageable
     );
 
+    /**
+     * 특정 유저가 참가한 MatchGuest 목록
+     * @param userId
+     */
+    void deleteByUser_Id(Long userId);
+
+
 }

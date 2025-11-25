@@ -10,6 +10,8 @@ import com.example.scsa.dto.profile.UserProfileDeleteResponseDTO;
 import com.example.scsa.exception.InvalidProfileUpdateException;
 import com.example.scsa.exception.UserDeleteNotAllowedException;
 import com.example.scsa.exception.UserNotFoundException;
+import com.example.scsa.repository.ChatRoomRepository;
+import com.example.scsa.repository.MatchGuestRepository;
 import com.example.scsa.repository.MatchRepository;
 import com.example.scsa.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,8 @@ public class UserProfileService {
 
     private final UserRepository userRepository;
     private final MatchRepository matchRepository;
+    private final MatchGuestRepository matchGuestRepository;
+    private final ChatRoomRepository chatRoomRepository;
 
     @Transactional(readOnly = true)
     public UserProfileDTO getUserProfile(Long userId){
@@ -83,8 +87,9 @@ public class UserProfileService {
     @Transactional
     public UserProfileDeleteResponseDTO deleteUser(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException());
+                .orElseThrow(UserNotFoundException::new);
 
+        // 1. Host로서 모집중인 매치가 있으면 탈퇴 불가
         boolean hasRecruitingMatches =
                 matchRepository.existsByHost_IdAndMatchStatus(userId, MatchStatus.RECRUITING);
 
@@ -94,8 +99,19 @@ public class UserProfileService {
             );
         }
 
+        // 2. 내가 게스트로 참가 중인 MatchGuest 기록 먼저 삭제
+        //    (탈퇴한 유저가 매치 참가자 목록에 남지 않도록)
+        matchGuestRepository.deleteByUser_Id(userId);
+
+        // 3. 내가 참여한 모든 채팅방 삭제 (Host/Guest 상관없이)
+        //    - ChatRoom 삭제 → Chat은 cascade로 자동 삭제
+        chatRoomRepository.deleteByUser1_IdOrUser2_Id(userId, userId);
+
+        // 4. 내가 Host인 COMPLETED 매치 삭제
+        //    - Match 삭제 → MatchGuest, match_age/gender/period는 cascade로 자동 삭제
         matchRepository.deleteAllByHost_IdAndMatchStatus(userId, MatchStatus.COMPLETED);
 
+        // 5. 마지막으로 User 삭제
         userRepository.delete(user);
 
         return UserProfileDeleteResponseDTO.builder()

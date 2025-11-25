@@ -57,6 +57,17 @@ spring:
     virtual-host: ${RABBITMQ_VHOST}
     stomp-port: ${RABBITMQ_STOMP_PORT}
 
+  # Spring batch
+  batch:
+    job:
+      # 앱 켤 때 @Bean Job 자동 실행 막기 (@Scheduled로 실행)
+      enabled: false
+    jdbc:
+      # 개발 환경에서는 배치 메타데이터 테이블 자동 생성
+      # (BATCH_JOB_INSTANCE 등)
+      initialize-schema: always
+      # 운영 분리할 때는 보통 never/embedded + 수동 DDL로 관리
+
 server:
   port: ${SERVER_PORT}
 

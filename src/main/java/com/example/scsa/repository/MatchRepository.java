@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -388,4 +389,22 @@ public interface MatchRepository extends JpaRepository<Match, Long> {
      * @param matchStatus
      */
     void deleteAllByHost_IdAndMatchStatus(Long hostId, MatchStatus matchStatus);
+
+    /**
+     * 현재시간을 비교하여 현재 상태가 recruiting인 매치를 completed로 변경
+     * @param now 현재 시간
+     * @param recruiting 현재 상태
+     * @param completed 변경할 상태
+     * @return 변경된 행 개수
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        UPDATE Match m
+           SET m.matchStatus = :completed
+         WHERE m.matchStartDateTime < :now
+           AND m.matchStatus = :recruiting
+        """)
+    int completeExpiredMatches(@Param("now") LocalDateTime now,
+                               @Param("recruiting") MatchStatus recruiting,
+                               @Param("completed") MatchStatus completed);
 }

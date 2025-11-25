@@ -407,4 +407,10 @@ public interface MatchRepository extends JpaRepository<Match, Long>, MatchReposi
     int completeExpiredMatches(@Param("now") LocalDateTime now,
                                @Param("recruiting") MatchStatus recruiting,
                                @Param("completed") MatchStatus completed);
+
+    // 첫 페이지: hostId 기준, matchId DESC
+    Slice<Match> findByHostIdOrderByIdDesc(Long hostId, Pageable pageable);
+
+    // 다음 페이지: cursor(마지막 matchId) 보다 작은 애들만, matchId DESC
+    Slice<Match> findByHostIdAndIdLessThanOrderByIdDesc(Long hostId, Long cursor, Pageable pageable);
 }

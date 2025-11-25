@@ -10,6 +10,7 @@ import com.example.scsa.domain.vo.Period;
 import com.example.scsa.dto.match.MatchDTO;
 import com.example.scsa.dto.match.MatchResponseDTO;
 import com.example.scsa.exception.*;
+import com.example.scsa.repository.ChatRoomRepository;
 import com.example.scsa.repository.CourtRepository;
 import com.example.scsa.repository.MatchRepository;
 import com.example.scsa.repository.UserRepository;
@@ -26,6 +27,7 @@ public class MatchService {
     private final MatchRepository matchRepository;
     private final UserRepository userRepository;
     private final CourtRepository courtRepository;
+    private final ChatRoomRepository chatRoomRepository;
 
     @Transactional
     public MatchResponseDTO createMatch(Long hostId, MatchDTO dto){
@@ -78,6 +80,7 @@ public class MatchService {
             throw new MatchAccessDeniedException(matchId);
         }
 
+        chatRoomRepository.deleteByMatchId(matchId);
         matchRepository.delete(match);
     }
 

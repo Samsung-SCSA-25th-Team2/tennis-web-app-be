@@ -81,11 +81,13 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     }
 
     /**
-     * 기존 사용자 정보 업데이트
+     * 기존 사용자 로그인 처리
+     * 주의: 기존 사용자의 정보는 업데이트하지 않음 (최초 가입 시 정보만 유지)
      */
     private User updateExistingUser(User user, OAuth2UserInfo oauth2UserInfo) {
-        log.info("기존 사용자 정보 업데이트 - UserId: {}", user.getId());
-        user.updateProfile(null, oauth2UserInfo.getImageUrl());
+        log.info("기존 사용자 로그인 - UserId: {}", user.getId());
+        // 기존 사용자는 정보를 업데이트하지 않음
+        // 사용자가 직접 변경한 프로필 정보를 보존
         return user;
     }
 

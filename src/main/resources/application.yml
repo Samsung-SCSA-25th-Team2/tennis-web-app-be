@@ -52,6 +52,17 @@ spring:
     virtual-host: ${RABBITMQ_VHOST}
     stomp-port: ${RABBITMQ_STOMP_PORT}
 
+  # Spring batch
+  batch:
+    job:
+      # 앱 켤 때 @Bean Job 자동 실행 막기 (@Scheduled로 실행)
+      enabled: false
+    jdbc:
+      # 개발 환경에서는 배치 메타데이터 테이블 자동 생성
+      # (BATCH_JOB_INSTANCE 등)
+      initialize-schema: always
+      # 운영 분리할 때는 보통 never/embedded + 수동 DDL로 관리
+
 server:
   port: ${SERVER_PORT}
 
@@ -96,3 +107,15 @@ cookie:
   secure: ${COOKIE_SECURE}
   same-site: ${COOKIE_SAME_SITE}
   domain: ${COOKIE_DOMAIN:}
+
+# AWS S3 설정
+aws:
+  s3:
+    bucket-name: ${AWS_S3_BUCKET_NAME}
+    region: ${AWS_S3_REGION}
+  access-key-id: ${AWS_ACCESS_KEY_ID}
+  secret-access-key: ${AWS_SECRET_ACCESS_KEY}
+
+# S3 Presigned URL 만료 시간 (초)
+s3:
+  presigned-url-expiration: ${S3_PRESIGNED_URL_EXPIRATION:300}

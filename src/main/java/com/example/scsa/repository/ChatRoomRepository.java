@@ -175,5 +175,16 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
             @Param("cursor") LocalDateTime cursor
     );
 
+    /**
+     * matchId에 따른 매치 삭제
+     * @param matchId
+     */
     void deleteByMatchId(Long matchId);
+
+    /**
+     * user1 이거나 user2 인 모든 채팅방 삭제
+     * @param userId1
+     * @param userId2
+     */
+    void deleteByUser1_IdOrUser2_Id(Long userId1, Long userId2);
 }

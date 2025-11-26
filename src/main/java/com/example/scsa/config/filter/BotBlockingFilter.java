@@ -60,13 +60,23 @@ public class BotBlockingFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String uri = request.getRequestURI().toLowerCase();
+        String originalUri = request.getRequestURI(); // 대소문자 구분이 필요한 경우
         String method = request.getMethod();
+
+        // OAuth2 로그인 경로는 절대 차단하지 않음
+        if (originalUri.startsWith("/oauth2/") ||
+            originalUri.startsWith("/api/oauth2/") ||
+            originalUri.startsWith("/login/oauth2/") ||
+            originalUri.startsWith("/auth/")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         // 의심스러운 경로 차단
         for (String blockedPath : BLOCKED_PATHS) {
             if (uri.contains(blockedPath.toLowerCase())) {
                 log.warn("봇 트래픽 차단 - Path: {}, IP: {}, User-Agent: {}",
-                        uri,
+                        originalUri,
                         getClientIp(request),
                         request.getHeader("User-Agent"));
                 response.setStatus(HttpServletResponse.SC_FORBIDDEN);

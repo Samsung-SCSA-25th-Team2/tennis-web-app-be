@@ -46,24 +46,39 @@ public class SecurityConfig {
 
                 // 경로별 접근 권한 설정
                 .authorizeHttpRequests(authorize -> authorize
-                        // Public 경로
-                        .requestMatchers("/", "/index.html", "/chat-test.html", "/oauth2/**", "/error", "/favicon.ico").permitAll()
-                        .requestMatchers("/login", "/login/**").permitAll() // 로그인 페이지 접근 허용
-                        .requestMatchers("/auth/**").permitAll() // OAuth2 콜백 페이지 접근 허용
-                        .requestMatchers("/api/v1/auth/status", "/api/v1/auth/logout", "/api/v1/auth/refresh").permitAll() // 토큰 재발급은 누구나 가능
+                        // Public 경로 - 정적 리소스
+                        .requestMatchers("/", "/index.html", "/chat-test.html", "/error", "/favicon.ico").permitAll()
+
+                        // OAuth2 로그인 관련 경로 (매우 중요!)
+                        .requestMatchers("/login", "/login/**").permitAll()
+                        .requestMatchers("/oauth2/**").permitAll() // OAuth2 인증 시작
+                        .requestMatchers("/api/oauth2/**").permitAll() // 커스텀 OAuth2 경로
+
+                        // OAuth2 콜백 경로
+                        .requestMatchers("/auth/**").permitAll()
+
+                        // 인증/인가 API
+                        .requestMatchers("/api/v1/auth/status", "/api/v1/auth/logout", "/api/v1/auth/refresh").permitAll()
+
                         // WebSocket 연결 경로
                         .requestMatchers("/ws-stomp/**").permitAll()
-                        // Internal health check 경로 (CodeDeploy, ALB 헬스체크 전용)
+
+                        // Health check 경로
                         .requestMatchers("/internal/health").permitAll()
-                        // Actuator health check 경로
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+
                         // Swagger UI 경로
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
-                        // Protected API - JWT 인증 필요
-                        .requestMatchers("/api/v1/auth/me").hasRole("USER")
+
+                        // Public API
                         .requestMatchers("/api/v1/matches").permitAll()
                         .requestMatchers("/api/v1/tennis-courts/**").permitAll()
-                        // 나머지는 모두 허용 (개발 중)
+
+                        // Protected API - JWT 인증 필요
+                        .requestMatchers("/api/v1/auth/me").hasRole("USER")
+                        .requestMatchers("/api/v1/**").hasRole("USER")
+
+                        // 운영서버에서 나머지 요청은 모두 인증 필요
                         .anyRequest().authenticated()
                 )
 

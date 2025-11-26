@@ -60,8 +60,8 @@ public class SecurityConfig {
                         // 인증/인가 API
                         .requestMatchers("/api/v1/auth/status", "/api/v1/auth/logout", "/api/v1/auth/refresh").permitAll()
 
-                        // WebSocket 연결 경로
-                        .requestMatchers("/ws-stomp/**").permitAll()
+                        // WebSocket 연결 경로 -> jwt 인터셉터로 대체
+//                        .requestMatchers("/ws-stomp/**").permitAll()
 
                         // Health check 경로
                         .requestMatchers("/internal/health").permitAll()
@@ -70,16 +70,15 @@ public class SecurityConfig {
                         // Swagger UI 경로
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
 
-                        // Public API
+                        // Public API (특정 경로가 먼저 와야 함!)
                         .requestMatchers("/api/v1/matches").permitAll()
                         .requestMatchers("/api/v1/tennis-courts/**").permitAll()
+                        .requestMatchers("/api/v1/users/**").permitAll()  // 사용자 프로필 조회 공개
 
                         // Protected API - JWT 인증 필요
-                        .requestMatchers("/api/v1/auth/me").hasRole("USER")
                         .requestMatchers("/api/v1/**").hasRole("USER")
 
-                        // 운영서버에서 나머지 요청은 모두 인증 필요
-                        .anyRequest().authenticated()
+                        .anyRequest().permitAll()
                 )
 
                 // OAuth2 소셜 로그인 설정

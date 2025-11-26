@@ -1,4 +1,6 @@
-package com.example.scsa.exception;
+package com.example.scsa.exception.court;
+
+import com.example.scsa.exception.ErrorCode;
 
 /**
  * 테니스장을 찾을 수 없을 때 발생하는 예외

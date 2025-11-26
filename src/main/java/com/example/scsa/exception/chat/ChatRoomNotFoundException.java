@@ -1,4 +1,4 @@
-package com.example.scsa.exception;
+package com.example.scsa.exception.chat;
 
 public class ChatRoomNotFoundException extends RuntimeException {
     public ChatRoomNotFoundException(String message) {

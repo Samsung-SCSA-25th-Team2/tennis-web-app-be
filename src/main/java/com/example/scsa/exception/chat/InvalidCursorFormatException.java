@@ -1,4 +1,4 @@
-package com.example.scsa.exception;
+package com.example.scsa.exception.chat;
 
 public class InvalidCursorFormatException extends RuntimeException {
     public InvalidCursorFormatException(String cursor) {

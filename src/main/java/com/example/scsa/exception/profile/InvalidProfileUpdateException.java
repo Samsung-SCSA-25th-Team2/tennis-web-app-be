@@ -1,4 +1,6 @@
-package com.example.scsa.exception;
+package com.example.scsa.exception.profile;
+
+import com.example.scsa.exception.ErrorCode;
 
 /**
  * 잘못된 프로필 수정 요청 시 발생하는 예외

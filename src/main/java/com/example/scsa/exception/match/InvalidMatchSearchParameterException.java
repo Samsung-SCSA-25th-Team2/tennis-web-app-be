@@ -1,4 +1,4 @@
-package com.example.scsa.exception;
+package com.example.scsa.exception.match;
 
 public class InvalidMatchSearchParameterException extends RuntimeException {
 

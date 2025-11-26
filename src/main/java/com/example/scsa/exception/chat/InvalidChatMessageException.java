@@ -1,4 +1,6 @@
-package com.example.scsa.exception;
+package com.example.scsa.exception.chat;
+
+import com.example.scsa.exception.ErrorCode;
 
 public class InvalidChatMessageException extends RuntimeException {
 

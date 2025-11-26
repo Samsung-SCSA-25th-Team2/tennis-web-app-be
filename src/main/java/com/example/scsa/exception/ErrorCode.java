@@ -23,6 +23,7 @@ public enum ErrorCode {
     DUPLICATE_NICKNAME(HttpStatus.CONFLICT, "USER-002", "이미 사용 중인 닉네임입니다."),
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "USER-003", "인증되지 않은 사용자입니다."),
     INVALID_PROFILE_UPDATE(HttpStatus.BAD_REQUEST, "USER-004", "잘못된 프로필 수정 요청입니다."),
+    USER_DELETE_NOT_ALLOWED(HttpStatus.FORBIDDEN, "USER-005", "개설한 매치가 하나이상 존재합니다. 탈퇴할 수 없습니다."),
 
     // Court
     COURT_NOT_FOUND(HttpStatus.NOT_FOUND, "COURT-001", "존재하지 않는 테니스장입니다."),
@@ -30,7 +31,7 @@ public enum ErrorCode {
     // Match
     MATCH_NOT_FOUND(HttpStatus.NOT_FOUND, "MATCH-001", "존재하지 않는 경기입니다."),
     INVALID_MATCH_SEARCH_PARAMETER(HttpStatus.BAD_REQUEST, "MATCH-002", "잘못된 매치 검색"),
-    INVALID_MATCH_CHANGE_STATUS(HttpStatus.BAD_REQUEST, "MATCH-003", "잘못된 매치 상태 변경"),
+    INVALID_MATCH_STATUS_CHANGE(HttpStatus.BAD_REQUEST, "MATCH-003", "잘못된 매치 상태 변경"),
     MATCH_ACCESS_DENIED(HttpStatus.FORBIDDEN, "MATCH-004", "매치에 접근할 권한이 없습니다."),
 
     //Chat
@@ -39,6 +40,7 @@ public enum ErrorCode {
     CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT-003", "존재하지 않는 채팅방입니다."),
     CHAT_ROOM_ACCESS_DENIED(HttpStatus.FORBIDDEN, "CHAT-004","채팅방에 접근할 권한이 없습니다."),
     INVALID_CURSOR_FORMAT(HttpStatus.BAD_REQUEST, "CHAT-005", "잘못된 커서 형식입니다."),
+    SELF_CHAT_ROOM_NOT_ALLOWED(HttpStatus.FORBIDDEN, "CHAT-006", "채팅방의 호스트와 게스트는 동일할 수 없습니다."),
 
     // Auth
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH-001", "유효하지 않은 토큰입니다."),

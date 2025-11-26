@@ -1,6 +1,9 @@
 package com.example.scsa.exception;
 
 import com.example.scsa.dto.response.ErrorResponse;
+import com.example.scsa.exception.court.CourtNotFoundException;
+import com.example.scsa.exception.match.MatchNotFoundException;
+import com.example.scsa.exception.profile.InvalidProfileUpdateException;
 import io.swagger.v3.oas.annotations.Hidden;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;

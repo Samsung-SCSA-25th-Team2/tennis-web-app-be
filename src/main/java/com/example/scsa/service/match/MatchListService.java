@@ -6,7 +6,7 @@ import com.example.scsa.domain.vo.MatchStatus;
 import com.example.scsa.dto.match.MatchListRequestDTO;
 import com.example.scsa.dto.match.MatchListResponseDTO;
 import com.example.scsa.dto.match.MatchSearchDTO;
-import com.example.scsa.exception.InvalidMatchSearchParameterException;
+import com.example.scsa.exception.match.InvalidMatchSearchParameterException;
 import com.example.scsa.repository.MatchRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -25,19 +25,38 @@ import java.util.stream.Collectors;
 @Slf4j
 public class MatchListService {
 
-    private static final double DEFAULT_LAT = 37.5666;   // 서울시청
+    // 위치 정보가 없을 때 사용할 기본 좌표 (서울 시청 근처)
+    private static final double DEFAULT_LAT = 37.5666;
     private static final double DEFAULT_LNG = 126.9782;
 
+    // ISO-8601 포맷(응답/커서에서 공통 사용)
     private static final DateTimeFormatter ISO_DATETIME = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
     private final MatchRepository matchRepository;
     private final ObjectMapper objectMapper;
 
+    /**
+     * 매치 목록 조회 메인 서비스
+     *
+     * 전체 흐름:
+     *  1) 요청 파라미터 기본값 세팅 + 유효성 검사 (날짜/시간/정렬/size 등)
+     *  2) gameType, status 파싱
+     *  3) 위치/반경 정보 처리 (sort=distance일 때 좌표 필수)
+     *  4) 기본 조건(from~to, gameType, status)에 맞는 매치 목록 DB 조회
+     *  5) 각 매치에 대해 거리(distanceKm), 추천 점수(score) 계산
+     *  6) 반경(radius) 필터 적용
+     *  7) 정렬 기준(sort)에 맞게 정렬
+     *  8) cursor가 있다면 메모리 상에서 cursor 이후 데이터만 남김
+     *  9) size 기준으로 페이징 + hasNext 판단
+     * 10) 마지막 요소 기준 nextCursor 생성(Base64 인코딩)
+     * 11) Match 엔티티 + 계산값 → MatchSearchDTO로 매핑 후 응답 생성
+     */
     public MatchListResponseDTO getMatchList(MatchListRequestDTO request) {
 
         // 1) 기본값 & Validation
         LocalDateTime now = LocalDateTime.now();
 
+        // 정렬 기준 기본값: createdAt
         String sort = (request.getSort() == null || request.getSort().isBlank())
                 ? "createdAt"
                 : request.getSort();
@@ -46,6 +65,7 @@ public class MatchListService {
                 ? 10
                 : request.getSize();
 
+        // 날짜 기본값: startDate = 오늘, endDate = 9999-12-31
         LocalDate startDate = (request.getStartDate() != null)
                 ? LocalDate.parse(request.getStartDate())
                 : now.toLocalDate();
@@ -61,6 +81,7 @@ public class MatchListService {
         int startHour = request.getStartTime() != null ? request.getStartTime() : 0;
         int endHour = request.getEndTime() != null ? request.getEndTime() : 24;
 
+        // 시간 범위 유효성 검사
         if (startHour < 0 || startHour > 23 || endHour < 1 || endHour > 24 || startHour >= endHour) {
             throw new InvalidMatchSearchParameterException("잘못된 시간 범위입니다.");
         }
@@ -68,7 +89,7 @@ public class MatchListService {
         LocalDateTime from = startDate.atTime(startHour, 0);
         LocalDateTime to = endDate.atTime(endHour == 24 ? 23 : endHour, endHour == 24 ? 59 : 0);
 
-        // 항상 현재 시각 이후만 조회
+        // 항상 “현재 시각 이후” 매치만 조회
         if (from.isBefore(now)) {
             from = now;
         }
@@ -85,11 +106,12 @@ public class MatchListService {
 
         List<MatchStatus> statuses = parseStatus(request.getStatus());
 
-        // 3) 위치/반경 처리
+        // 3) 위치/반경 처리 (sort=distance일 때 좌표 필수)
         double[] latLng = resolveLatLng(sort, request.getLatitude(), request.getLongitude());
         double lat = latLng[0];
         double lng = latLng[1];
 
+        // 반경 기본값: 25km
         int radius = (request.getRadius() == null || request.getRadius() <= 0)
                 ? 25
                 : request.getRadius();
@@ -97,45 +119,48 @@ public class MatchListService {
         // 4) 기본 필터된 매치 목록 조회
         List<Match> matches = matchRepository.findMatchesForSearch(from, to, gameType, statuses);
 
-        // 5) 거리, Score 계산
+        // 5) 각 매치에 대해 거리/추천점수 같이 들고 다니기 위한 래퍼로 감싸기
         List<MatchWithMetrics> withMetrics = matches.stream()
                 .map(m -> {
-                    double distanceKm = calculateDistanceKm(lat, lng,
+                    double distanceKm = calculateDistanceKm(
+                            lat, lng,
                             m.getCourt().getLatitude(),
-                            m.getCourt().getLongitude());
+                            m.getCourt().getLongitude()
+                    );
                     double score = calculateScore(sort, now, distanceKm, m.getMatchStartDateTime());
                     return new MatchWithMetrics(m, distanceKm, score);
                 })
                 .collect(Collectors.toList());
 
-        // 6) radius 필터 적용
+        // 6) radius(반경) 필터: 기준 좌표에서 radius km 이내만 남김
         withMetrics = withMetrics.stream()
                 .filter(w -> w.distanceKm <= radius)
                 .collect(Collectors.toList());
 
-        // 7) 정렬
+        // 7) 정렬: createdAt / latest / distance / recommend 에 따른 정렬
         sortMatches(withMetrics, sort);
 
-        // 8) cursor 적용 (메모리에서 filtering)
+        // 8) cursor 적용 (메모리 상에서 필터링)
+        //    - 이전 요청에서 넘겨준 cursor 이후의 데이터만 남김
         if (request.getCursor() != null && !request.getCursor().isBlank()) {
             withMetrics = applyCursorFilter(withMetrics, sort, request.getCursor());
         }
 
-        // 9) 페이징 (size + hasNext)
+        // 9) 페이징 처리: size + hasNext
         boolean hasNext = withMetrics.size() > size;
 
         List<MatchWithMetrics> page = withMetrics.stream()
                 .limit(size)
                 .collect(Collectors.toList());
 
-        // 10) nextCursor 생성
+        // 10) nextCursor 생성: 페이지의 마지막 요소 기준으로 생성
         String nextCursor = null;
         if (hasNext && !page.isEmpty()) {
             MatchWithMetrics last = page.get(page.size() - 1);
             nextCursor = encodeCursor(sort, last);
         }
 
-        // 11) DTO 매핑
+        // 11) 응답 DTO 매핑
         List<MatchSearchDTO> content = page.stream()
                 .map(this::toSearchDTO)
                 .collect(Collectors.toList());
@@ -152,6 +177,11 @@ public class MatchListService {
     // Helper methods
     // ==========================
 
+    /**
+     * status 쿼리 파라미터 파싱
+     * - null/빈값 → 기본값 "RECRUITING"
+     * - 콤마(,) 기준으로 여러 개 허용: "RECRUITING,COMPLETED"
+     */
     private List<MatchStatus> parseStatus(String statusParam) {
         String value = (statusParam == null || statusParam.isBlank())
                 ? "RECRUITING"
@@ -171,6 +201,14 @@ public class MatchListService {
         return result;
     }
 
+    /**
+     * 위도/경도 처리 로직
+     *
+     * - sort=distance 일 때는 lat/lng 필수
+     * - 그 외 sort 값에서는
+     *      • 둘 다 null이면 DEFAULT_LAT/LNG 사용
+     *      • 하나만 null이면 예외
+     */
     private double[] resolveLatLng(String sort, Double lat, Double lng) {
         // sort=distance → lat/lng 필수
         if ("distance".equals(sort)) {
@@ -182,6 +220,7 @@ public class MatchListService {
 
         // recommend/createdAt/latest
         if (lat == null && lng == null) {
+            // 위치 정보가 전혀 없으면 기본 좌표 사용
             return new double[]{DEFAULT_LAT, DEFAULT_LNG};
         }
 
@@ -193,7 +232,7 @@ public class MatchListService {
     }
 
     /**
-     * Haversine 거리 계산 (km)
+     * Haversine 공식으로 두 좌표 간 거리(km) 계산
      */
     private double calculateDistanceKm(double lat1, double lng1, double lat2, double lng2) {
         final int R = 6371; // 지구 반지름(km)
@@ -210,7 +249,12 @@ public class MatchListService {
     }
 
     /**
-     * recommend일 때만 Score 계산, 그 외는 0
+     * recommend 정렬일 때 사용할 점수 계산
+     *
+     * - sort != recommend 이면 0 리턴
+     * - timeScore: 현재 시각과 매치 시작 시각의 차이(분)를 최대 1일(1440분) 기준으로 0~1로 정규화
+     * - distanceScore: 거리(km)를 반경 25km 기준으로 0~1로 정규화
+     * - 최종점수 = 0.7 * timeScore + 0.3 * distanceScore
      */
     private double calculateScore(String sort, LocalDateTime now, double distanceKm, LocalDateTime startDateTime) {
         if (!"recommend".equals(sort)) {
@@ -226,6 +270,16 @@ public class MatchListService {
         return 0.7 * timeScore + 0.3 * distanceScore;
     }
 
+    /**
+     * 정렬 기준별 Comparator 적용
+     *
+     * - latest     : 매치 시작일시 오름차순
+     * - distance   : 거리 오름차순
+     * - recommend  : score 오름차순
+     * - createdAt  : 생성일시 오름차순 (기본값)
+     *
+     * 동일 값일 때는 match.id로 2차 정렬
+     */
     private void sortMatches(List<MatchWithMetrics> list, String sort) {
         switch (sort) {
             case "latest":
@@ -252,13 +306,24 @@ public class MatchListService {
     }
 
     /**
-     * cursor 이후 데이터만 남기는 필터 (메모리 상)
+     * cursor 이후 데이터만 남기는 필터 (메모리 상에서 처리)
+     *
+     * cursorBase64:
+     *  - sort별로 다른 구조의 JSON을 Base64로 인코딩한 문자열
+     *      * latest    : { startDateTime, id }
+     *      * distance  : { distance, id }
+     *      * recommend : { score, id }
+     *      * createdAt : { createdAt, id }
+     *
+     *  - 디코딩해서 cursor 기준을 복원한 뒤,
+     *    "cursor보다 이후"인 데이터부터 서브리스트를 반환
      */
     private List<MatchWithMetrics> applyCursorFilter(List<MatchWithMetrics> list,
                                                      String sort,
                                                      String cursorBase64) {
 
         try {
+            // Base64 → JSON String
             String json = new String(Base64.getDecoder().decode(cursorBase64));
 
             int startIndex = 0;
@@ -340,6 +405,9 @@ public class MatchListService {
 
     /**
      * 마지막 요소 기준으로 cursor JSON → Base64 생성
+     *
+     * 정렬 기준에 따라 서로 다른 Cursor DTO를 만들어 JSON 직렬화 후
+     * Base64 인코딩해서 문자열로 응답에 넣는다.
      */
     private String encodeCursor(String sort, MatchWithMetrics last) {
         try {
@@ -382,7 +450,7 @@ public class MatchListService {
     }
 
     /**
-     * Entity → Response DTO 매핑
+     * Entity + 부가 정보(MatchWithMetrics) → 응답 DTO 매핑
      */
     private MatchSearchDTO toSearchDTO(MatchWithMetrics w) {
         Match m = w.match;
@@ -395,7 +463,7 @@ public class MatchListService {
                 .gameType(m.getGameType().name())
                 .courtId(m.getCourt().getId())
                 .fee(m.getFee())
-                // 아래 두 줄은 실제 엔티티 구조에 맞게 수정
+                // VO 컬렉션들을 문자열 리스트로 변환 (예: ["ONE_YEAR", "TWO_YEARS"])
                 .period(m.getPeriods().stream().map(Enum::name).collect(Collectors.toList()))
                 .playerCountMen(m.getPlayerCountMen())
                 .playerCountWomen(m.getPlayerCountWomen())
@@ -405,8 +473,12 @@ public class MatchListService {
                 .build();
     }
 
+    /**
+     * 내부 도메인 MatchStatus → API 응답용 문자열 매핑
+     * (예: RECRUITING → "OPEN", COMPLETED → "CLOSED")
+     */
     private String mapStatus(MatchStatus status) {
-        // 명세: 응답 status는 OPEN/CLOSED로 내려가는 예시
+        // 명세: 응답 status는 OPEN/CLOSED
         return switch (status) {
             case RECRUITING -> "OPEN";
             case COMPLETED -> "CLOSED";
@@ -417,6 +489,9 @@ public class MatchListService {
     // 내부용 래퍼 & 커서 DTO
     // ==========================
 
+    /**
+     * Match + 거리/추천 점수 정보를 묶어서 다루기 위한 내부용 래퍼 클래스
+     */
     private static class MatchWithMetrics {
         private final Match match;
         private final double distanceKm;
@@ -429,6 +504,9 @@ public class MatchListService {
         }
     }
 
+    /**
+     * createdAt 정렬용 커서 구조
+     */
     private static class CreatedAtCursor {
         public String createdAt;
         public Long id;
@@ -441,6 +519,9 @@ public class MatchListService {
         }
     }
 
+    /**
+     * latest(매치 시작 시간) 정렬용 커서 구조
+     */
     private static class LatestCursor {
         public String startDateTime;
         public Long id;
@@ -453,6 +534,9 @@ public class MatchListService {
         }
     }
 
+    /**
+     * distance 정렬용 커서 구조
+     */
     private static class DistanceCursor {
         public double distance;
         public Long id;
@@ -465,6 +549,9 @@ public class MatchListService {
         }
     }
 
+    /**
+     * recommend 정렬용 커서 구조
+     */
     private static class RecommendCursor {
         public double score;
         public Long id;

@@ -2,14 +2,17 @@ package com.example.scsa.controller;
 
 import com.example.scsa.dto.match.*;
 import com.example.scsa.dto.response.ErrorResponse;
-import com.example.scsa.exception.InvalidMatchSearchParameterException;
-import com.example.scsa.exception.InvalidMatchStatusChangeException;
-import com.example.scsa.exception.MatchAccessDeniedException;
-import com.example.scsa.exception.MatchNotFoundException;
-import com.example.scsa.service.match.MatchListService;
+import com.example.scsa.exception.match.InvalidMatchStatusChangeException;
+import com.example.scsa.exception.match.MatchAccessDeniedException;
+import com.example.scsa.exception.match.MatchNotFoundException;
 import com.example.scsa.service.match.MatchMyListService;
-import com.example.scsa.service.match.MatchSearchService;
 import com.example.scsa.service.match.MatchService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,11 +26,42 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("api/v1/me/matches")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "매치 API (인증 필요 O)", description = "매치 생성, 삭제, 상태 변경 및 내가 개설한 매치 목록 조회 관련 API")
 public class MyMatchController {
 
     private final MatchService matchService;
     private final MatchMyListService matchMyListService;
 
+    /*
+     * 매치 생성
+     * POST /api/v1/matches
+     */
+    @Operation(
+            summary = "매치 생성",
+            description = "로그인한 사용자(host)가 새로운 매치를 등록합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "매치 생성 성공",
+                    content = @Content(schema = @Schema(implementation = MatchResponseDTO.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "유효하지 않은 요청 데이터",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "인증되지 않은 사용자",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "서버 내부 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
     @PostMapping
     public ResponseEntity<?> createMatch(@Valid @RequestBody MatchDTO request) {
 
@@ -59,6 +93,26 @@ public class MyMatchController {
         }
     }
 
+    /*
+     * 매치 삭제
+     * DELETE /api/v1/matches/{match_id}
+     */
+    @Operation(
+            summary = "매치 삭제",
+            description = "로그인한 사용자가 자신이 만든 매치를 삭제합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "매치 삭제 성공",
+                    content = @Content(schema = @Schema(implementation = String.class))),
+            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "권한 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "매치 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "500", description = "서버 내부 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @DeleteMapping("/{match_id}")
     public ResponseEntity<?> deleteMatch(@PathVariable("match_id") Long matchId){
 
@@ -96,6 +150,28 @@ public class MyMatchController {
         }
     }
 
+    /*
+     * 매치 상태 변경
+     * PATCH /api/v1/matches/{match_id}
+     */
+    @Operation(
+            summary = "매치 상태 변경",
+            description = "매치 상태(RECRUITING ↔ COMPLETED)를 변경합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "상태 변경 성공",
+                    content = @Content(schema = @Schema(implementation = MatchResponseDTO.class))),
+            @ApiResponse(responseCode = "400", description = "유효하지 않은 상태 변경",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "권한 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "매치 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "500", description = "서버 내부 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @PatchMapping("/{match_id}")
     public ResponseEntity<?> changeMatchStatus(@PathVariable("match_id") Long matchId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -134,6 +210,22 @@ public class MyMatchController {
         }
     }
 
+    /*
+     * 내 매치 조회
+     * GET /api/v1/me/matches?cursor={cursor}&size={size}
+     */
+    @Operation(
+            summary = "내 매치 목록 조회",
+            description = "로그인한 사용자가 만든 매치를 커서 기반으로 조회합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = MatchMyListResponseDTO.class))),
+            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "500", description = "서버 내부 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @GetMapping
     public ResponseEntity<?> getMyMatches( @RequestParam(value = "cursor", required = false) Long cursor,
                                            @RequestParam(value = "size", required = false, defaultValue = "10") Integer size) {

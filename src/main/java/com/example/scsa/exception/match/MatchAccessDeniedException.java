@@ -8,7 +8,7 @@ import com.example.scsa.exception.ErrorCode;
 public class MatchAccessDeniedException extends RuntimeException {
 
     public MatchAccessDeniedException() {
-        super(ErrorCode.MATCH_NOT_FOUND.getMessage());
+        super(ErrorCode.MATCH_ACCESS_DENIED.getMessage());
     }
 
     public MatchAccessDeniedException(String message) {

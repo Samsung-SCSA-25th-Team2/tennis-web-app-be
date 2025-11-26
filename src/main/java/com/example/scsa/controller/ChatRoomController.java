@@ -2,10 +2,8 @@ package com.example.scsa.controller;
 
 import com.example.scsa.dto.chat.*;
 import com.example.scsa.dto.response.ErrorResponse;
-import com.example.scsa.exception.chat.ChatRoomAccessDeniedException;
-import com.example.scsa.exception.chat.ChatRoomAlreadyExistsException;
-import com.example.scsa.exception.chat.ChatRoomNotFoundException;
-import com.example.scsa.exception.chat.InvalidCursorFormatException;
+import com.example.scsa.exception.UserNotFoundException;
+import com.example.scsa.exception.chat.*;
 import com.example.scsa.service.chat.ChatHistoryService;
 import com.example.scsa.service.chat.ChatReadService;
 import com.example.scsa.service.chat.ChatRoomService;
@@ -23,6 +21,7 @@ import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @Tag(name = "채팅방", description = "1:1 채팅방 관리 API (STOMP WebSocket 기반)")
 @RestController
@@ -49,12 +48,22 @@ public class ChatRoomController {
         ),
         @ApiResponse(
             responseCode = "401",
-            description = "인증 실패",
+            description = "사용자 인증 실패",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class))
         ),
         @ApiResponse(
+                responseCode = "403",
+                description = "채팅방 생성 실패 - 호스트와 게스트가 동일할 수 없음",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+        ),
+        @ApiResponse(
+                responseCode = "404",
+                description = "채팅방 생성 실패 - 유저가 존재하지 않음",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+        ),
+        @ApiResponse(
             responseCode = "409",
-            description = "이미 존재하는 채팅방",
+            description = "채팅방 생성 실패 - 이미 존재하는 채팅방",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class))
         )
     })
@@ -87,7 +96,15 @@ public class ChatRoomController {
             log.error("잘못된 사용자 ID 형식: {}", authentication.getName());
             return ResponseEntity.status(400)
                     .body(ErrorResponse.of("잘못된 사용자 ID입니다.", "INVALID_USER_ID"));
-        } catch (ChatRoomAlreadyExistsException e) {
+        } catch(SelfChatRoomNotAllowedException e){
+            log.error("채팅방 생성 실패 - 호스트와 게스트가 동일할 수 없음");
+            return ResponseEntity.status(403)
+                    .body(ErrorResponse.of("채팅방 생성 실패 - 호스트와 게스트가 동일할 수 없습니다.", "SELF_CHAT_ROOM_NOT_ALLOWED"));
+        } catch(UserNotFoundException e){
+            log.error("채팅방 생성 실패 - 유저가 존재하지 않음");
+            return ResponseEntity.status(404)
+                    .body(ErrorResponse.of("채팅방 생성 실패 - 유저가 존재하지 않습니다.", "USER_NOT_FOUND"));
+        }catch (ChatRoomAlreadyExistsException e) {
             log.warn("채팅방 생성 실패 - 본인이 개설한 채팅방이 존재함");
             return ResponseEntity.status(409)
                     .body(ErrorResponse.of(e.getMessage(), "CHAT_ROOM_ALREADY_EXISTS"));

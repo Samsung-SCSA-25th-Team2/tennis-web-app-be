@@ -1,4 +1,6 @@
-package com.example.scsa.exception;
+package com.example.scsa.exception.match;
+
+import com.example.scsa.exception.ErrorCode;
 
 /**
  * 경기를 찾을 수 없을 때 발생하는 예외

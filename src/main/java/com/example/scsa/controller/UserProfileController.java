@@ -8,7 +8,7 @@ import com.example.scsa.dto.request.ProfileCompleteRequest;
 import com.example.scsa.dto.response.ErrorResponse;
 import com.example.scsa.dto.response.PresignedUrlResponse;
 import com.example.scsa.dto.response.ProfileCompleteResponse;
-import com.example.scsa.exception.UserDeleteNotAllowedException;
+import com.example.scsa.exception.profile.UserDeleteNotAllowedException;
 import com.example.scsa.exception.UserNotFoundException;
 import com.example.scsa.repository.UserRepository;
 import com.example.scsa.service.S3Service;
@@ -248,6 +248,42 @@ public class UserProfileController {
      * 본인 계정 삭제 및 관련 데이터 제거
      * DELETE /api/v1/users/me/delete
      */
+    @Operation(
+            summary = "회원 탈퇴",
+            description = "로그인한 사용자의 계정을 삭제합니다. 사용자가 개설한 모집 중인 매치가 있으면 탈퇴가 불가능합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "회원 탈퇴 성공",
+                    content = @Content(schema = @Schema(implementation = UserProfileDeleteResponseDTO.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "잘못된 사용자 ID 형식",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "인증되지 않은 사용자",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "사용자를 찾을 수 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "모집 중인 매치가 있어 탈퇴 불가",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "서버 내부 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
     @DeleteMapping("/me/delete")
     public ResponseEntity<?> deleteCurrentUser() {
 

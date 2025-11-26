@@ -1,4 +1,4 @@
-package com.example.scsa.exception;
+package com.example.scsa.exception.chat;
 
 public class ChatRoomAccessDeniedException extends RuntimeException {
     public ChatRoomAccessDeniedException(Long chatRoomId, Long userId) {

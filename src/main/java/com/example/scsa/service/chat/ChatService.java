@@ -58,7 +58,14 @@ public class ChatService {
         Chat chat = new Chat(chatRoom, sender, dto.getMessage());
         Chat saved = chatRepository.save(chat);
 
-        // 5. 저장 결과 DTO 변환
+        // ChatRoom의 마지막 메시지 정보 갱신
+        // createdAt이 Auditing으로 관리된다면 saved.getCreatedAt() 사용
+        // 아니라면 LocalDateTime.now() 사용
+        chatRoom.updateLastMessage(dto.getMessage(), saved.getCreatedAt());
+
+        // 별도의 save 호출 불필요 (영속 상태라 트랜잭션 커밋 시 자동 flush)
+        // chatRoomRepository.save(chatRoom);  // 일반적으로 안 해도 됨
+
         return ChatMessageResponseDTO.from(saved);
     }
 

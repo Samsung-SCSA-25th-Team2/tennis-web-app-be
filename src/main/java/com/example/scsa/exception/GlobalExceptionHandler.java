@@ -15,6 +15,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.List;
 
@@ -175,6 +176,30 @@ public class GlobalExceptionHandler {
                 errorCode.getCode()
         );
         return new ResponseEntity<>(response, errorCode.getStatus());
+    }
+
+    /**
+     * 정적 리소스를 찾을 수 없는 경우 (favicon, login 등)
+     * 로그 레벨을 낮춰서 에러 로그가 쌓이지 않도록 함
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    protected ResponseEntity<ErrorResponse> handleNoResourceFoundException(NoResourceFoundException e) {
+        String resourcePath = e.getResourcePath();
+
+        // favicon, login 등 일반적인 브라우저 요청은 debug 레벨로만 로깅
+        if (resourcePath.equals("favicon.ico") || resourcePath.equals("login") ||
+            resourcePath.startsWith("assets/") || resourcePath.startsWith("static/")) {
+            log.debug("Static resource not found (expected): {}", resourcePath);
+        } else {
+            // 그 외 리소스는 warn 레벨로 로깅
+            log.warn("Resource not found: {}", resourcePath);
+        }
+
+        final ErrorResponse response = ErrorResponse.of(
+                "Resource not found: " + resourcePath,
+                "RESOURCE_NOT_FOUND"
+        );
+        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
     }
 
     /**

@@ -120,6 +120,7 @@ public class UserProfileController {
         log.info("닉네임 중복 체크 - nickname={}, available={}", nickname, available);
         return ResponseEntity.ok(response);
     }
+
     /**
      * user_id로 특정 유저의 프로필 정보 조회
      * GET /api/v1/users/{user_id}

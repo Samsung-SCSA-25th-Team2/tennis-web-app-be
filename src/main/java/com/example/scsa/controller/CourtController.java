@@ -42,7 +42,7 @@ public class CourtController {
             @Parameter(description = "테니스장 ID", required = true) @PathVariable("court_id") Long courtId) {
 
         CourtDTO response = courtService.findById(courtId);
-        return ResponseEntity.ok(response);  // 200
+        return ResponseEntity.ok(response);
     }
 
     /**

@@ -5,6 +5,7 @@ import com.example.scsa.exception.chat.ChatRoomAlreadyExistsException;
 import com.example.scsa.domain.entity.ChatRoom;
 import com.example.scsa.domain.entity.Match;
 import com.example.scsa.domain.entity.User;
+import com.example.scsa.exception.chat.InvalidCursorFormatException;
 import com.example.scsa.exception.match.MatchNotFoundException;
 import com.example.scsa.exception.chat.SelfChatRoomNotAllowedException;
 import com.example.scsa.exception.UserNotFoundException;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -107,7 +109,11 @@ public class ChatRoomService {
         // 1. cursor → LocalDateTime 파싱 (null이면 첫 페이지 조회)
         LocalDateTime cursorTime = null;
         if (request.getCursor() != null) {
-            cursorTime = LocalDateTime.parse(request.getCursor());
+            try {
+                cursorTime = LocalDateTime.parse(request.getCursor());
+            } catch(DateTimeParseException e){
+                throw new InvalidCursorFormatException();
+            }
         }
 
         int size = request.getPageSize();
@@ -117,7 +123,6 @@ public class ChatRoomService {
          * findChatRoomsByUserWithCursor:
          *  - currentUserId가 user1 또는 user2인 채팅방을 조회
          *  - lastMessageAt 기준 내림차순 정렬
-         *  - cursorTime 이전의 데이터만 반환하는 쿼리라고 가정
          */
         List<ChatRoom> rooms = chatRoomRepository
                 .findChatRoomsByUserWithCursor(currentUserId, cursorTime)

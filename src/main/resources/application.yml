@@ -119,3 +119,28 @@ aws:
 # S3 Presigned URL 만료 시간 (초)
 s3:
   presigned-url-expiration: ${S3_PRESIGNED_URL_EXPIRATION:300}
+
+# 로깅 설정
+logging:
+  level:
+    root: INFO
+    com.example.scsa: INFO
+    # Spring Security 로깅 레벨 조정 (너무 자세한 로그 방지)
+    org.springframework.security: WARN
+    # Hibernate SQL 로깅
+    org.hibernate.SQL: ${SQL_LOG_LEVEL:INFO}
+    org.hibernate.type.descriptor.sql.BasicBinder: ${SQL_LOG_LEVEL:INFO}
+    # Spring Web 로깅
+    org.springframework.web: INFO
+    # 봇 차단 필터는 WARN (차단 시에만 로깅)
+    com.example.scsa.config.filter.BotBlockingFilter: WARN
+    # JWT 필터는 INFO (인증 성공/실패 로깅)
+    com.example.scsa.config.filter.JwtAuthenticationFilter: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSX} %5p %process --- [%15.15t] %-40.40logger{39} : %m%n%wEx"
+    file: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSX} %5p %process --- [%15.15t] %-40.40logger{39} : %m%n%wEx"
+  file:
+    name: ${LOG_FILE_PATH:/var/log/tennis-web-app/application.log}
+    max-size: ${LOG_FILE_MAX_SIZE:100MB}
+    max-history: ${LOG_FILE_MAX_HISTORY:30}
+    total-size-cap: ${LOG_FILE_TOTAL_SIZE:3GB}

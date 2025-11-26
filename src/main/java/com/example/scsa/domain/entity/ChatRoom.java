@@ -136,4 +136,20 @@ public class ChatRoom extends CreatableEntity {
         return id != null ? id.hashCode() : getClass().hashCode();
     }
 
+    public void updateLastMessage(String message, LocalDateTime sentAt) {
+        if (message == null) {
+            this.lastMessagePreview = null;
+            this.lastMessageAt = sentAt;
+            return;
+        }
+
+        // 프리뷰 길이 제한 (예: 50자)
+        int maxLength = 50;
+        this.lastMessagePreview =
+                message.length() > maxLength
+                        ? message.substring(0, maxLength)
+                        : message;
+
+        this.lastMessageAt = sentAt;
+    }
 }

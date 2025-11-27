@@ -60,7 +60,8 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll()
 
                         // 인증/인가 API
-                        .requestMatchers("/api/v1/auth/status", "/api/v1/auth/logout", "/api/v1/auth/refresh").permitAll()
+                        .requestMatchers("/api/v1/auth/logout", "/api/v1/auth/refresh").permitAll()
+                        .requestMatchers("/api/v1/auth/status").hasRole("USER")  // 인증 필수
 
                         // WebSocket 연결 경로 -> jwt 인터셉터로 대체
 //                        .requestMatchers("/ws-stomp/**").permitAll()
@@ -75,7 +76,11 @@ public class SecurityConfig {
                         // Public API (특정 경로가 먼저 와야 함!)
                         .requestMatchers("/api/v1/matches").permitAll()
                         .requestMatchers("/api/v1/tennis-courts/**").permitAll()
-                        .requestMatchers("/api/v1/users/**").permitAll()  // 사용자 프로필 조회 공개
+
+                        // Users API - 세밀한 권한 설정
+                        .requestMatchers("/api/v1/users/check-nickname").permitAll()  // 닉네임 중복 체크
+                        .requestMatchers("/api/v1/users/{user_id:[0-9]+}").permitAll()  // 특정 사용자 프로필 조회
+                        .requestMatchers("/api/v1/users/**").hasRole("USER")  // 나머지는 인증 필요
 
                         // Protected API - JWT 인증 필요
                         .requestMatchers("/api/v1/**").hasRole("USER")

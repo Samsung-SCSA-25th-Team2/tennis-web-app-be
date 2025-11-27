@@ -1,6 +1,7 @@
 package com.example.scsa.config.filter;
 
 import com.example.scsa.util.JwtUtil;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,6 +17,8 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 @Slf4j
 @Component
@@ -65,9 +68,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // JWT는 유효하지만 사용자를 찾을 수 없는 경우 (DB 초기화 등)
                 log.warn("JWT 토큰은 유효하지만 사용자를 찾을 수 없습니다: {}", e.getMessage());
             }
-        } else if (isProtectedApi) {
-            // 보호된 API에 토큰 없이 접근하는 경우만 로깅
+        } else if (StringUtils.hasText(token) && !jwtUtil.validateToken(token) && isProtectedApi) {
+            // 보호된 API에 만료된/유효하지 않은 토큰으로 접근하는 경우 401 반환
+            log.warn("인증 실패 - 만료되거나 유효하지 않은 토큰: {}", uri);
+            sendUnauthorizedResponse(response, "토큰이 만료되었거나 유효하지 않습니다.");
+            return;
+        } else if (!StringUtils.hasText(token) && isProtectedApi) {
+            // 보호된 API에 토큰 없이 접근하는 경우 401 반환
             log.warn("인증 실패 - 보호된 API에 토큰 없이 접근: {}", uri);
+            sendUnauthorizedResponse(response, "인증 토큰이 필요합니다.");
+            return;
         }
 
         filterChain.doFilter(request, response);
@@ -97,11 +107,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      * 공개 엔드포인트 판단
      */
     private boolean isPublicEndpoint(String uri) {
-        return uri.startsWith("/api/v1/auth/status") ||
-               uri.startsWith("/api/v1/auth/logout") ||
+        return uri.startsWith("/api/v1/auth/logout") ||
                uri.startsWith("/api/v1/auth/refresh") ||
                uri.startsWith("/api/v1/matches") ||
-               uri.startsWith("/api/v1/tennis-courts");
+               uri.startsWith("/api/v1/tennis-courts") ||
+               uri.startsWith("/api/v1/users/check-nickname") ||
+               uri.matches("/api/v1/users/\\d+");  // /api/v1/users/{숫자}
     }
 
     private String resolveToken(HttpServletRequest request) {
@@ -112,5 +123,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         return null;
+    }
+
+    /**
+     * 401 Unauthorized 응답 전송
+     */
+    private void sendUnauthorizedResponse(HttpServletResponse response, String message) throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("error", "UNAUTHORIZED");
+        errorResponse.put("message", message);
+        errorResponse.put("status", 401);
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
     }
 }

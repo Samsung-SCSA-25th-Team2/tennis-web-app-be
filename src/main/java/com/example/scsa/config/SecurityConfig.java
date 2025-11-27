@@ -82,6 +82,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/users/{user_id:[0-9]+}").permitAll()  // 특정 사용자 프로필 조회
                         .requestMatchers("/api/v1/users/**").hasRole("USER")  // 나머지는 인증 필요
 
+                        // Chat API - 채팅방 개수 조회는 공개
+                        .requestMatchers("/api/v1/chat/rooms/count/**").permitAll()
+
                         // Protected API - JWT 인증 필요
                         .requestMatchers("/api/v1/**").hasRole("USER")
 

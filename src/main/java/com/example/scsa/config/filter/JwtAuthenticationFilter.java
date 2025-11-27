@@ -112,7 +112,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                uri.startsWith("/api/v1/matches") ||
                uri.startsWith("/api/v1/tennis-courts") ||
                uri.startsWith("/api/v1/users/check-nickname") ||
-               uri.matches("/api/v1/users/\\d+");  // /api/v1/users/{숫자}
+               uri.matches("/api/v1/users/\\d+") ||  // /api/v1/users/{숫자}
+               uri.startsWith("/api/v1/chat/rooms/count/");  // 채팅방 개수 조회
     }
 
     private String resolveToken(HttpServletRequest request) {

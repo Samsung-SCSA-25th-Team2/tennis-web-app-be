@@ -1,20 +1,25 @@
 package com.example.scsa.dto.match;
 
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class MatchDTO {
 
     @NotNull
-    private String startDateTime;
+    private LocalDateTime startDateTime;
 
     @NotNull
-    private String endDateTime;
+    private LocalDateTime endDateTime;
 
     @NotNull
     private String gameType;

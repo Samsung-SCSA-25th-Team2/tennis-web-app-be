@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -31,11 +30,8 @@ public class MatchListService {
     private static final double DEFAULT_LNG = 126.9782;
 
     // ISO-8601 포맷(응답/커서에서 공통 사용)
-    // Z를 붙여서 응답 (프론트엔드 규약: 2025-11-17T19:00:00Z)
-    private static final DateTimeFormatter ISO_DATETIME = new DateTimeFormatterBuilder()
-            .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
-            .appendLiteral('Z')
-            .toFormatter();
+    // Z 없이 응답 (프론트엔드 규약 변경: 2025-11-17T19:00:00)
+    private static final DateTimeFormatter ISO_DATETIME = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
     private final MatchRepository matchRepository;
     private final ObjectMapper objectMapper;

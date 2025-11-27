@@ -1,6 +1,7 @@
 package com.example.scsa.config;
 
 import com.example.scsa.config.filter.JwtAuthenticationFilter;
+import com.example.scsa.handler.auth.CookieOAuth2AuthorizationRequestRepository;
 import com.example.scsa.handler.auth.OAuth2LoginFailureHandler;
 import com.example.scsa.handler.auth.OAuth2LoginSuccessHandler;
 import com.example.scsa.service.auth.CustomOAuth2UserService;
@@ -27,6 +28,7 @@ public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
     private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
+    private final CookieOAuth2AuthorizationRequestRepository cookieOAuth2AuthorizationRequestRepository;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CorsConfigurationSource corsConfigurationSource;
 
@@ -84,6 +86,8 @@ public class SecurityConfig {
                 // OAuth2 소셜 로그인 설정
                 .oauth2Login(oauth2 -> oauth2
                         .loginPage("/login")
+                        .authorizationEndpoint(authorization -> authorization
+                                .authorizationRequestRepository(cookieOAuth2AuthorizationRequestRepository))
                         .redirectionEndpoint(redirect -> redirect.baseUri("/login/oauth2/code/*"))
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                         .successHandler(oAuth2LoginSuccessHandler)  // 로그인 성공 시 JWT 발급

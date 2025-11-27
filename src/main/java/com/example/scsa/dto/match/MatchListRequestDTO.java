@@ -73,10 +73,10 @@ public class MatchListRequestDTO {
 
     /**
      * 검색 반경(km)
-     * - null이면 기본값 25km
+     * - null이면 기본값 100000km
      */
     @Builder.Default
-    private Integer radius = 25;
+    private Integer radius = 100000;
 
     /**
      * 매치 상태 필터

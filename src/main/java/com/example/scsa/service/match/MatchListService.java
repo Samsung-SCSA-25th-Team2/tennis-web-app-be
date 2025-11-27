@@ -66,14 +66,14 @@ public class MatchListService {
                 ? 10
                 : request.getSize();
 
-        // 날짜 기본값: startDate = 오늘, endDate = 9999-12-31
+        // 날짜 기본값: startDate = 오늘, endDate = 9998-12-31
         LocalDate startDate = (request.getStartDate() != null)
                 ? LocalDate.parse(request.getStartDate())
                 : now.toLocalDate();
 
         LocalDate endDate = (request.getEndDate() != null)
                 ? LocalDate.parse(request.getEndDate())
-                : LocalDate.of(9999, 12, 31);
+                : LocalDate.of(9998, 12, 31);
 
         if (startDate.isAfter(endDate)) {
             throw new InvalidMatchSearchParameterException("startDate는 endDate보다 이후일 수 없습니다.");

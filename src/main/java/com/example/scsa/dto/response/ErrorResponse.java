@@ -34,7 +34,7 @@ public class ErrorResponse {
     private String errorCode;
 
     /**
-     * 발생 시각
+     * 발생 시각 (한국 시간 기준)
      */
     @Schema(description = "에러 발생 시각", example = "2025-01-19T12:00:00")
     @Builder.Default

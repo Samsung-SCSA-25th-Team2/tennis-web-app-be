@@ -4,6 +4,7 @@ import com.example.scsa.dto.chat.*;
 import com.example.scsa.dto.response.ErrorResponse;
 import com.example.scsa.exception.UserNotFoundException;
 import com.example.scsa.exception.chat.*;
+import com.example.scsa.repository.ChatRoomRepository;
 import com.example.scsa.service.chat.ChatHistoryService;
 import com.example.scsa.service.chat.ChatReadService;
 import com.example.scsa.service.chat.ChatRoomService;
@@ -33,6 +34,7 @@ public class ChatRoomController {
     private final ChatRoomService chatRoomService;
     private final ChatReadService chatReadService;
     private final ChatHistoryService chatHistoryService;
+    private final ChatRoomRepository chatRoomRepository;
 
     @Operation(
         summary = "채팅방 생성",
@@ -166,6 +168,48 @@ public class ChatRoomController {
                     .body(ErrorResponse.of("서버 오류가 발생했습니다.", "INTERNAL_SERVER_ERROR"));
         }
 
+    }
+
+    @Operation(
+        summary = "매치별 채팅방 개수 조회",
+        description = "특정 매치에 생성된 채팅방의 개수를 조회합니다. 인증이 필요하지 않은 공개 API입니다."
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "채팅방 개수 조회 성공",
+            content = @Content(schema = @Schema(implementation = ChatRoomCountResponseDTO.class))
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "잘못된 매치 ID 형식",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+        ),
+        @ApiResponse(
+            responseCode = "500",
+            description = "서버 내부 오류",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+        )
+    })
+    @GetMapping("/count/match/{matchId}")
+    public ResponseEntity<?> getChatRoomCountByMatch(
+            @Parameter(description = "매치 ID", required = true, example = "1")
+            @PathVariable Long matchId
+    ) {
+        try {
+            log.info("매치별 채팅방 개수 조회 요청 - matchId: {}", matchId);
+
+            long count = chatRoomRepository.countByMatchId(matchId);
+            ChatRoomCountResponseDTO response = ChatRoomCountResponseDTO.of(matchId, count);
+
+            log.info("매치별 채팅방 개수 조회 성공 - matchId: {}, count: {}", matchId, count);
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("매치별 채팅방 개수 조회 실패 - 서버 오류: {}", e.getMessage(), e);
+            return ResponseEntity.status(500)
+                    .body(ErrorResponse.of("서버 오류가 발생했습니다.", "INTERNAL_SERVER_ERROR"));
+        }
     }
 
     /*

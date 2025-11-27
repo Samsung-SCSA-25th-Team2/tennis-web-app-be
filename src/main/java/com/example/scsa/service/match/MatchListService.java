@@ -114,7 +114,7 @@ public class MatchListService {
 
         // 반경 기본값: 25km
         int radius = (request.getRadius() == null || request.getRadius() <= 0)
-                ? 25
+                ? 100000
                 : request.getRadius();
 
         // 4) 기본 필터된 매치 목록 조회

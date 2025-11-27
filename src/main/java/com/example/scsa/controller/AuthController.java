@@ -52,6 +52,60 @@ public class AuthController {
     private final RefreshTokenService refreshTokenService;
 
     /**
+     * 카카오 로그인 (문서화 전용)
+     *
+     * 실제 엔드포인트: /api/oauth2/authorization/kakao
+     *
+     * 이 API는 Spring Security OAuth2가 자동으로 처리합니다.
+     * 프론트엔드에서는 window.location.href로 리다이렉트하세요.
+     *
+     * 흐름:
+     * 1. 사용자가 /api/oauth2/authorization/kakao 접속
+     * 2. 카카오 로그인 페이지로 리다이렉트
+     * 3. 로그인 성공 시 /login/oauth2/code/kakao로 콜백
+     * 4. JWT 발급 후 프론트엔드로 리다이렉트: {frontendUrl}/auth/callback?accessToken={token}
+     */
+    @Operation(
+        summary = "[OAuth2] 카카오 로그인 시작",
+        description = """
+            **카카오 소셜 로그인을 시작합니다.**
+
+            ### 사용 방법
+            ```javascript
+            // 프론트엔드에서 리다이렉트
+            window.location.href = 'https://{baseURL}/api/oauth2/authorization/kakao';
+            ```
+
+            ### 로그인 플로우
+            1. 사용자가 이 URL로 접속
+            2. 카카오 로그인 페이지로 자동 리다이렉트
+            3. 사용자 로그인 및 동의
+            4. 백엔드 콜백 URL로 리턴 (/login/oauth2/code/kakao)
+            5. JWT 생성 후 프론트엔드로 리다이렉트
+               - URL: {프론트엔드}/auth/callback?accessToken={JWT}
+               - Refresh Token은 httpOnly 쿠키로 자동 설정
+
+            ### 주의사항
+            - 이 엔드포인트는 **API 호출이 아닌 브라우저 리다이렉트**로만 사용해야 합니다
+            - Swagger UI의 "Try it out" 버튼으로는 테스트할 수 없습니다
+            - 실제 카카오 개발자 콘솔에 Redirect URI가 등록되어 있어야 합니다
+            """
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "302", description = "카카오 로그인 페이지로 리다이렉트")
+    })
+    @GetMapping(value = "/oauth2/authorization/kakao", produces = "application/json")
+    public ResponseEntity<Map<String, String>> kakaoLoginDoc() {
+        // 실제로는 이 메서드가 호출되지 않음 (Spring Security가 먼저 처리)
+        // Swagger 문서화 용도로만 사용
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "이 엔드포인트는 브라우저에서 직접 접속해야 합니다.");
+        response.put("url", "/api/oauth2/authorization/kakao");
+        response.put("method", "GET (Browser Redirect)");
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * 인증 상태 조회 API
      *
      * @return 인증 상태 정보

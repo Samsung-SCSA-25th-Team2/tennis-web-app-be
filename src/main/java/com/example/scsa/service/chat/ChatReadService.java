@@ -12,10 +12,17 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 
 @Service
 @RequiredArgsConstructor
 public class ChatReadService {
+
+    // Z를 붙여서 응답 (프론트엔드 규약: 2025-11-17T19:00:00Z)
+    private static final DateTimeFormatter ISO_FORMATTER_WITH_Z = new DateTimeFormatterBuilder()
+            .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
+            .appendLiteral('Z')
+            .toFormatter();
 
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRepository chatRepository;
@@ -51,7 +58,7 @@ public class ChatReadService {
         int updatedCount = chatRepository.markMessagesAsRead(chatRoomId, currentUserId, now);
 
         String readAtStr = (updatedCount > 0)
-                ? now.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                ? now.format(ISO_FORMATTER_WITH_Z)
                 : null;
 
         // 4. 응답 DTO 생성 후 반환

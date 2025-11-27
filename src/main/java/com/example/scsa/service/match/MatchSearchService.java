@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.util.Comparator;
 import java.util.List;
 
@@ -88,9 +89,15 @@ public class MatchSearchService {
     }
 
     /**
-     * LocalDateTime → ISO-8601 문자열 변환
+     * LocalDateTime → ISO-8601 문자열 변환 (Z 포함)
+     * 프론트엔드 규약: 2025-11-17T19:00:00Z
      */
+    private static final DateTimeFormatter ISO_FORMATTER_WITH_Z = new DateTimeFormatterBuilder()
+            .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
+            .appendLiteral('Z')
+            .toFormatter();
+
     private String toIso(LocalDateTime dt) {
-        return dt != null ? dt.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null;
+        return dt != null ? dt.format(ISO_FORMATTER_WITH_Z) : null;
     }
 }

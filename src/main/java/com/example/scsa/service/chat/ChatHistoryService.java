@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -25,7 +26,11 @@ public class ChatHistoryService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRepository chatRepository;
 
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+    // Z를 붙여서 응답 (프론트엔드 규약: 2025-11-17T19:00:00Z)
+    private static final DateTimeFormatter FORMATTER = new DateTimeFormatterBuilder()
+            .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
+            .appendLiteral('Z')
+            .toFormatter();
 
     /**
      * 특정 채팅방의 과거 메시지 조회 (커서 기반 페이징)

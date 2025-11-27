@@ -51,6 +51,15 @@ public class AuthController {
     private final JwtUtil jwtUtil;
     private final RefreshTokenService refreshTokenService;
 
+    @Value("${cookie.secure}")
+    private boolean cookieSecure;
+
+    @Value("${cookie.same-site}")
+    private String cookieSameSite;
+
+    @Value("${cookie.domain:}")
+    private String cookieDomain;
+
     /**
      * 카카오 로그인 (문서화 전용)
      *
@@ -304,15 +313,23 @@ public class AuthController {
 
     /**
      * Refresh Token을 httpOnly 쿠키로 추가
+     * 환경변수를 통해 보안 설정 적용 (cookie.secure, cookie.same-site, cookie.domain)
      */
     private void addRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
         Cookie cookie = new Cookie("refreshToken", refreshToken);
         cookie.setHttpOnly(true);  // JavaScript에서 접근 불가 (XSS 방지)
-        cookie.setSecure(false);   // HTTPS only (배포 시 true로 변경)
+        cookie.setSecure(cookieSecure);   // 환경변수로 관리 (HTTPS 환경에서 true)
         cookie.setPath("/");
         cookie.setMaxAge(7 * 24 * 60 * 60);  // 7일 (초 단위)
+
+        // Domain 설정 (환경변수에 값이 있을 경우만)
+        if (cookieDomain != null && !cookieDomain.trim().isEmpty()) {
+            cookie.setDomain(cookieDomain);
+        }
+
         response.addCookie(cookie);
-        log.info("Refresh Token 쿠키 설정 완료");
+        log.info("Refresh Token 쿠키 설정 완료 - secure: {}, sameSite: {}, domain: {}",
+                 cookieSecure, cookieSameSite, cookieDomain);
     }
 
     /**

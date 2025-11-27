@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.util.List;
 
 @Service
@@ -23,7 +24,11 @@ public class MatchMyListService {
 
     private final MatchRepository matchRepository;
 
-    private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+    // Z를 붙여서 응답 (프론트엔드 규약: 2025-11-17T19:00:00Z)
+    private static final DateTimeFormatter ISO_FORMATTER = new DateTimeFormatterBuilder()
+            .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
+            .appendLiteral('Z')
+            .toFormatter();
     private static final int DEFAULT_SIZE = 10;
     private static final int MAX_SIZE = 50;
 

@@ -59,8 +59,8 @@ public class MatchService {
                 .orElseThrow(CourtNotFoundException::new);
 
         // 3. 시간 검증
-        LocalDateTime start = LocalDateTime.parse(dto.getStartDateTime());
-        LocalDateTime end = LocalDateTime.parse(dto.getEndDateTime());
+        LocalDateTime start = dto.getStartDateTime();
+        LocalDateTime end = dto.getEndDateTime();
         if (end.isBefore(start)){
             throw new IllegalArgumentException("종료 시간은 시작 시간 이후이어야 합니다.");
         }

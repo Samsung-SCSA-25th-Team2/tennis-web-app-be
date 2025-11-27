@@ -76,23 +76,32 @@ public class ChatRoomService {
                 match.getId(), hostId, currentUserId
         );
         if (exists) {
-            throw new ChatRoomAlreadyExistsException(match.getId(), hostId, currentUserId);
+            ChatRoom chatRoom = chatRoomRepository.findByMatchIdAndUser1_IdAndUser2_Id(match.getId(),hostId,currentUserId);
+            return ChatRoomCreateResponseDTO.builder()
+                    .chatRoomId(chatRoom.getId())
+                    .matchId(chatRoom.getMatchId())
+                    .hostId(hostId)
+                    .hostNickname(host.getNickname())
+                    .hostImgUrl(host.getImgUrl())
+                    .guestId(currentUserId)
+                    .guestNickname(guest.getNickname())
+                    .guestImgUrl(guest.getImgUrl())
+                    .build();
         }
-
-        // 5. 채팅방 생성 및 저장
-        ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(match.getId(), host, guest));
-
-        // 6. 응답 DTO로 변환
-        return ChatRoomCreateResponseDTO.builder()
-                .chatRoomId(chatRoom.getId())
-                .matchId(chatRoom.getMatchId())
-                .hostId(hostId)
-                .hostNickname(host.getNickname())
-                .hostImgUrl(host.getImgUrl())
-                .guestId(currentUserId)
-                .guestNickname(guest.getNickname())
-                .guestImgUrl(guest.getImgUrl())
-                .build();
+        else {
+            // 5. 채팅방 생성 및 저장
+            ChatRoom chatRoom = chatRoomRepository.save(new ChatRoom(match.getId(), host, guest));
+            return ChatRoomCreateResponseDTO.builder()
+                    .chatRoomId(chatRoom.getId())
+                    .matchId(chatRoom.getMatchId())
+                    .hostId(hostId)
+                    .hostNickname(host.getNickname())
+                    .hostImgUrl(host.getImgUrl())
+                    .guestId(currentUserId)
+                    .guestNickname(guest.getNickname())
+                    .guestImgUrl(guest.getImgUrl())
+                    .build();
+        }
     }
 
     /**

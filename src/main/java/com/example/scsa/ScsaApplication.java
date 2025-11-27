@@ -1,13 +1,22 @@
 package com.example.scsa;
 
 import io.github.cdimascio.dotenv.Dotenv;
+import jakarta.annotation.PostConstruct;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
+import java.util.TimeZone;
+
 @SpringBootApplication
 @EnableJpaAuditing // JPA Auditing 활성화
 public class ScsaApplication {
+
+	@PostConstruct
+	public void started() {
+		// timezone UTC 셋팅
+		TimeZone.setDefault(TimeZone.getTimeZone("Asia/Seoul"));
+	}
 
 	public static void main(String[] args) {
 		// 환경에 따라 .env 파일 선택 (.env.prod 또는 .env.local)

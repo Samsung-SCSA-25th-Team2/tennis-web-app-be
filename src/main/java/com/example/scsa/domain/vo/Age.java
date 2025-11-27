@@ -9,4 +9,5 @@ public enum Age {
     THIRTY,      // 30대
     FORTY,       // 40대
     OVER_FIFTY   // 50대 이상
+
 }

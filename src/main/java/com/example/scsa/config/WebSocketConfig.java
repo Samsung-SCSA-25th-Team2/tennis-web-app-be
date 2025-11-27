@@ -4,9 +4,12 @@ import com.example.scsa.config.websocket.JwtChannelInterceptor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
@@ -67,7 +70,12 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .setClientPasscode(rabbitmqPassword)
                 .setSystemLogin(rabbitmqUsername)
                 .setSystemPasscode(rabbitmqPassword)
-                .setVirtualHost(rabbitmqVirtualHost);
+                .setVirtualHost(rabbitmqVirtualHost)
+                // Heartbeat 설정: 서버 → 클라이언트 10초, 클라이언트 → 서버 10초
+                // 죽은 연결을 빠르게 감지하여 자동 정리
+                .setTaskScheduler(taskScheduler())
+                .setSystemHeartbeatSendInterval(10000)     // 서버 → 클라이언트 heartbeat (10초)
+                .setSystemHeartbeatReceiveInterval(10000); // 클라이언트 → 서버 heartbeat (10초)
 
         // 클라이언트가 서버로 메시지를 보낼 때 사용할 프리픽스를 설정합니다.
         // @MessageMapping 어노테이션이 붙은 메소드가 이 프리픽스가 붙은 경로로 들어오는 메시지를 처리합니다.
@@ -82,5 +90,25 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void configureClientInboundChannel(ChannelRegistration registration) {
         registration.interceptors(jwtChannelInterceptor);
         log.info("JWT Channel Interceptor 등록 완료 - WebSocket 메시지 인증 활성화");
+    }
+
+    /**
+     * Heartbeat용 TaskScheduler 빈 등록
+     *
+     * WebSocket Heartbeat 메커니즘:
+     * - 서버와 클라이언트가 주기적으로 ping/pong 메시지 교환
+     * - 응답이 없으면 연결이 끊어진 것으로 판단하여 자동 정리
+     * - 비활성 연결로 인한 서버 리소스 낭비 방지
+     */
+    @Bean
+    public TaskScheduler taskScheduler() {
+        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(10);  // Heartbeat 처리용 스레드 풀 크기
+        scheduler.setThreadNamePrefix("websocket-heartbeat-");
+        scheduler.setWaitForTasksToCompleteOnShutdown(true);
+        scheduler.setAwaitTerminationSeconds(30);
+        scheduler.initialize();
+        log.info("WebSocket Heartbeat TaskScheduler 초기화 완료 (Pool Size: 10)");
+        return scheduler;
     }
 }

@@ -7,6 +7,6 @@ package com.example.scsa.domain.vo;
 public enum Age {
     TWENTY,      // 20대
     THIRTY,      // 30대
-    FOURTY,       // 40대
+    FORTY,       // 40대
     OVER_FIFTY   // 50대 이상
 }

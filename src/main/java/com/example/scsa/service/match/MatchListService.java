@@ -323,11 +323,14 @@ public class MatchListService {
                                                      String sort,
                                                      String cursorBase64) {
 
+        if (list.isEmpty()) {
+            return list;
+        }
+
         try {
-            // Base64 → JSON String
             String json = new String(Base64.getDecoder().decode(cursorBase64));
 
-            int startIndex = 0;
+            int startIndex = list.size(); // 기본값: "cursor 이후 데이터 없음"
 
             switch (sort) {
                 case "latest": {
@@ -338,6 +341,9 @@ public class MatchListService {
                     for (int i = 0; i < list.size(); i++) {
                         MatchWithMetrics m = list.get(i);
                         LocalDateTime start = m.match.getMatchStartDateTime();
+
+                        // 정렬 기준: startDateTime 오름차순, id 오름차순
+                        // → cursor보다 "뒤에 있는" 첫 번째 요소 찾기
                         if (start.isAfter(cursorStart)
                                 || (start.equals(cursorStart) && m.match.getId() > cursorId)) {
                             startIndex = i;
@@ -346,6 +352,7 @@ public class MatchListService {
                     }
                     break;
                 }
+
                 case "distance": {
                     DistanceCursor c = objectMapper.readValue(json, DistanceCursor.class);
                     double cursorDist = c.distance;
@@ -353,14 +360,18 @@ public class MatchListService {
 
                     for (int i = 0; i < list.size(); i++) {
                         MatchWithMetrics m = list.get(i);
-                        if (m.distanceKm > cursorDist
-                                || (Double.compare(m.distanceKm, cursorDist) == 0 && m.match.getId() > cursorId)) {
+                        double d = m.distanceKm;
+
+                        // 정렬 기준: distance 오름차순, id 오름차순
+                        if (d > cursorDist
+                                || (Double.compare(d, cursorDist) == 0 && m.match.getId() > cursorId)) {
                             startIndex = i;
                             break;
                         }
                     }
                     break;
                 }
+
                 case "recommend": {
                     RecommendCursor c = objectMapper.readValue(json, RecommendCursor.class);
                     double cursorScore = c.score;
@@ -368,14 +379,18 @@ public class MatchListService {
 
                     for (int i = 0; i < list.size(); i++) {
                         MatchWithMetrics m = list.get(i);
-                        if (m.score > cursorScore
-                                || (Double.compare(m.score, cursorScore) == 0 && m.match.getId() > cursorId)) {
+                        double s = m.score;
+
+                        // 정렬 기준: score 오름차순, id 오름차순
+                        if (s > cursorScore
+                                || (Double.compare(s, cursorScore) == 0 && m.match.getId() > cursorId)) {
                             startIndex = i;
                             break;
                         }
                     }
                     break;
                 }
+
                 case "createdAt":
                 default: {
                     CreatedAtCursor c = objectMapper.readValue(json, CreatedAtCursor.class);
@@ -385,6 +400,8 @@ public class MatchListService {
                     for (int i = 0; i < list.size(); i++) {
                         MatchWithMetrics m = list.get(i);
                         LocalDateTime created = m.match.getCreatedAt();
+
+                        // 정렬 기준: createdAt 오름차순, id 오름차순
                         if (created.isAfter(cursorCreatedAt)
                                 || (created.equals(cursorCreatedAt) && m.match.getId() > cursorId)) {
                             startIndex = i;
@@ -394,9 +411,12 @@ public class MatchListService {
                 }
             }
 
-            if (startIndex <= 0) {
-                return list;
+            // cursor 이후 데이터가 없으면 빈 리스트
+            if (startIndex >= list.size()) {
+                return Collections.emptyList();
             }
+
+            // cursor 이후 데이터만 반환
             return list.subList(startIndex, list.size());
 
         } catch (Exception e) {

@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -25,6 +26,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ChatRoomService {
+
+    private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRepository chatRepository;
@@ -159,7 +162,7 @@ public class ChatRoomService {
                             .lastMessagePreview(room.getLastMessagePreview())
                             .lastMessageAt(room.getLastMessageAt() == null
                                     ? null
-                                    : room.getLastMessageAt().toString())
+                                    : room.getLastMessageAt().format(ISO_FORMATTER))
                             .unreadCount(unread)
                             .build();
                 })
@@ -167,7 +170,7 @@ public class ChatRoomService {
 
         // 5. nextCursor: 마지막 채팅방의 lastMessageAt 기준
         String nextCursor = hasNext
-                ? rooms.get(rooms.size() - 1).getLastMessageAt().toString()
+                ? rooms.get(rooms.size() - 1).getLastMessageAt().format(ISO_FORMATTER)
                 : null;
 
         return ChatRoomListResponseDTO.builder()

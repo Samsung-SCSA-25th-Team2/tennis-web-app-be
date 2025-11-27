@@ -107,61 +107,41 @@ public class AuthController {
 
     /**
      * 인증 상태 조회 API
+     * JWT 인증이 필수이므로 이 엔드포인트에 도달하면 항상 인증된 사용자입니다.
      *
      * @return 인증 상태 정보
      */
-    @Operation(summary = "인증 상태 조회", description = "현재 사용자의 인증 상태 및 프로필 완성 여부를 확인합니다.")
+    @Operation(summary = "인증 상태 조회", description = "현재 사용자의 인증 상태 및 프로필 완성 여부를 확인합니다. JWT 인증 필수.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "조회 성공",
-            content = @Content(schema = @Schema(implementation = AuthStatusResponse.class)))
+            content = @Content(schema = @Schema(implementation = AuthStatusResponse.class))),
+        @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자 (토큰 없음 또는 만료됨)",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @GetMapping("/status")
     public ResponseEntity<AuthStatusResponse> getAuthStatus() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         log.info("=== AuthController.getAuthStatus() ===");
-        log.info("Authentication 존재: {}", authentication != null);
 
-        if (authentication != null) {
-            log.info("Authentication type: {}", authentication.getClass().getName());
-            log.info("Authentication.isAuthenticated(): {}", authentication.isAuthenticated());
-            log.info("Is AnonymousAuthenticationToken: {}", authentication instanceof AnonymousAuthenticationToken);
-            log.info("Authentication.getName(): {}", authentication.getName());
-        }
+        // JwtAuthenticationFilter를 통과했으므로 항상 인증된 상태
+        String userIdStr = authentication.getName();
+        Long userId = Long.parseLong(userIdStr);
 
-        // AnonymousAuthenticationToken 체크 추가
-        if (authentication != null
-                && authentication.isAuthenticated()
-                && !(authentication instanceof AnonymousAuthenticationToken)) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
-            String userIdStr = authentication.getName();
-            log.info("인증된 사용자 ID: {}", userIdStr);
+        log.info("사용자 정보 조회 성공: {} (ID: {}), 프로필 완성 여부: {}",
+                user.getName(), user.getUserId(), user.isProfileComplete());
 
-            try {
-                Long userId = Long.parseLong(userIdStr);
-                User user = userRepository.findById(userId).orElse(null);
-
-                if (user != null) {
-                    log.info("사용자 정보 조회 성공: {} (ID: {}), 프로필 완성 여부: {}",
-                            user.getName(), user.getUserId(), user.isProfileComplete());
-                    return ResponseEntity.ok(AuthStatusResponse.authenticated(
-                            user.getUserId(),
-                            user.getProvider(),
-                            user.getProviderId(),
-                            user.getName(),
-                            user.getImgUrl(),
-                            user.isProfileComplete()
-                    ));
-                } else {
-                    log.warn("DB에서 사용자를 찾을 수 없음: userId={}", userId);
-                }
-            } catch (NumberFormatException e) {
-                log.error("잘못된 사용자 ID 형식: {}", userIdStr);
-            }
-        }
-
-        log.info("미인증 사용자 응답 반환");
-        return ResponseEntity.ok(AuthStatusResponse.unauthenticated());
+        return ResponseEntity.ok(AuthStatusResponse.authenticated(
+                user.getUserId(),
+                user.getProvider(),
+                user.getProviderId(),
+                user.getName(),
+                user.getImgUrl(),
+                user.isProfileComplete()
+        ));
     }
 
 

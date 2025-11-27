@@ -60,4 +60,13 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
      * @param userId2
      */
     void deleteByUser1_IdOrUser2_Id(Long userId1, Long userId2);
+
+    /**
+     * matchId, userId1, userId2로 채팅방 조회
+     * @param matchId
+     * @param userId1
+     * @param userId2
+     * @return 채팅방
+     */
+    ChatRoom findByMatchIdAndUser1_IdAndUser2_Id(Long matchId, Long userId1, Long userId2);
 }

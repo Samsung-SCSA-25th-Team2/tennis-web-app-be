@@ -28,11 +28,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ChatRoomService {
 
-    // Z를 붙여서 응답 (프론트엔드 규약: 2025-11-17T19:00:00Z)
-    private static final DateTimeFormatter ISO_FORMATTER = new DateTimeFormatterBuilder()
-            .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
-            .appendLiteral('Z')
-            .toFormatter();
+    // Z 없이 응답 (프론트엔드 규약 변경: 2025-11-17T19:00:00)
+    private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRepository chatRepository;

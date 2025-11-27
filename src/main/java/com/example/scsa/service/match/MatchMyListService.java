@@ -24,11 +24,8 @@ public class MatchMyListService {
 
     private final MatchRepository matchRepository;
 
-    // Z를 붙여서 응답 (프론트엔드 규약: 2025-11-17T19:00:00Z)
-    private static final DateTimeFormatter ISO_FORMATTER = new DateTimeFormatterBuilder()
-            .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
-            .appendLiteral('Z')
-            .toFormatter();
+    // Z 없이 응답 (프론트엔드 규약 변경: 2025-11-17T19:00:00)
+    private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
     private static final int DEFAULT_SIZE = 10;
     private static final int MAX_SIZE = 50;
 

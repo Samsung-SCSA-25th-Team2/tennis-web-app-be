@@ -26,11 +26,8 @@ public class ChatHistoryService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRepository chatRepository;
 
-    // Z를 붙여서 응답 (프론트엔드 규약: 2025-11-17T19:00:00Z)
-    private static final DateTimeFormatter FORMATTER = new DateTimeFormatterBuilder()
-            .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
-            .appendLiteral('Z')
-            .toFormatter();
+    // Z 없이 응답 (프론트엔드 규약 변경: 2025-11-17T19:00:00)
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
     /**
      * 특정 채팅방의 과거 메시지 조회 (커서 기반 페이징)

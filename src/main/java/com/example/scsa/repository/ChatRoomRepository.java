@@ -69,4 +69,11 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
      * @return 채팅방
      */
     ChatRoom findByMatchIdAndUser1_IdAndUser2_Id(Long matchId, Long userId1, Long userId2);
+
+    /**
+     * 특정 매치의 채팅방 개수 조회
+     * @param matchId 매치 ID
+     * @return 채팅방 개수
+     */
+    long countByMatchId(Long matchId);
 }

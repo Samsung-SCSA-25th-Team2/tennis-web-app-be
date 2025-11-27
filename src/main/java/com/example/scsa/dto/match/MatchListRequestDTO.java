@@ -76,7 +76,7 @@ public class MatchListRequestDTO {
      * - null이면 기본값 25km
      */
     @Builder.Default
-    private Integer radius = 25;
+    private Integer radius = 100000;
 
     /**
      * 매치 상태 필터

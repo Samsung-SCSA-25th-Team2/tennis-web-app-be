@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -119,6 +120,14 @@ public class MatchListService {
 
         // 4) 기본 필터된 매치 목록 조회
         List<Match> matches = matchRepository.findMatchesForSearch(from, to, gameType, statuses);
+
+        int startHourFilter = startHour;
+        int endHourFilter = endHour;
+
+        matches = matches.stream()
+                .filter(match -> isWithinDailyTimeRange(match.getMatchStartDateTime(), startHourFilter, endHourFilter)
+                        && isWithinDailyTimeRange(match.getMatchEndDateTime(), startHourFilter, endHourFilter))
+                .collect(Collectors.toList());
 
         // 5) 각 매치에 대해 거리/추천점수 같이 들고 다니기 위한 래퍼로 감싸기
         List<MatchWithMetrics> withMetrics = matches.stream()
@@ -247,6 +256,16 @@ public class MatchListService {
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
         return R * c;
+    }
+
+    /**
+     * 매치 시간(시:분)이 요청된 시간 필터 범위(startHour~endHour)에 속하는지 검사
+     */
+    private boolean isWithinDailyTimeRange(LocalDateTime targetDateTime, int startHour, int endHour) {
+        LocalTime start = LocalTime.of(startHour, 0);
+        LocalTime end = (endHour == 24) ? LocalTime.MAX : LocalTime.of(endHour, 0);
+        LocalTime targetTime = targetDateTime.toLocalTime();
+        return !targetTime.isBefore(start) && !targetTime.isAfter(end);
     }
 
     /**

@@ -42,14 +42,9 @@ public class MatchRepositoryImpl implements MatchRepositoryCustom {
                         "JOIN FETCH m.court c " +
                         "JOIN FETCH m.host h " +
                         "WHERE " +
-                        "   FUNCTION('DATE', m.matchStartDateTime) BETWEEN FUNCTION('DATE', :from) AND FUNCTION('DATE', :to) " +
+                        "   m.matchStartDateTime BETWEEN :from AND :to " +
                         "AND " +
-                        "   FUNCTION('TIME', m.matchStartDateTime) BETWEEN FUNCTION('TIME', :from) AND FUNCTION('TIME', :to)" +
-                        "AND " +
-                        "   FUNCTION('DATE', m.matchEndDateTime) BETWEEN FUNCTION('DATE', :from) AND FUNCTION('DATE', :to) " +
-                        "AND " +
-                        "   FUNCTION('TIME', m.matchEndDateTime) BETWEEN FUNCTION('TIME', :from) AND FUNCTION('TIME', :to)"
-
+                        "   m.matchEndDateTime BETWEEN :from AND :to"
         );
 
         // 선택 조건(gameType)

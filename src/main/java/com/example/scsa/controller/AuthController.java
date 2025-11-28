@@ -1,11 +1,10 @@
 package com.example.scsa.controller;
 
 import com.example.scsa.domain.entity.User;
-import com.example.scsa.dto.request.ProfileCompleteRequest;
+import org.springframework.beans.factory.annotation.Value;
 import com.example.scsa.dto.response.AuthStatusResponse;
 import com.example.scsa.dto.response.ErrorResponse;
 import com.example.scsa.dto.response.LogoutResponse;
-import com.example.scsa.dto.response.ProfileCompleteResponse;
 import com.example.scsa.dto.response.TokenResponse;
 import com.example.scsa.dto.response.UserInfoResponse;
 import com.example.scsa.repository.UserRepository;
@@ -13,7 +12,6 @@ import com.example.scsa.service.RefreshTokenService;
 import com.example.scsa.service.UserService;
 import com.example.scsa.util.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -22,7 +20,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;

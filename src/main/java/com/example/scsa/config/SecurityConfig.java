@@ -74,7 +74,7 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
 
                         // Public API (특정 경로가 먼저 와야 함!)
-                        .requestMatchers("/api/v1/matches").permitAll()
+                        .requestMatchers("/api/v1/matches/**").permitAll()
                         .requestMatchers("/api/v1/tennis-courts/**").permitAll()
 
                         // Users API - 세밀한 권한 설정

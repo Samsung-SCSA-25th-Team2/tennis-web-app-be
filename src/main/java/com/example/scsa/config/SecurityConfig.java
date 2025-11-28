@@ -1,5 +1,6 @@
 package com.example.scsa.config;
 
+import com.example.scsa.config.RestAuthenticationEntryPoint;
 import com.example.scsa.config.filter.JwtAuthenticationFilter;
 import com.example.scsa.handler.auth.CookieOAuth2AuthorizationRequestRepository;
 import com.example.scsa.handler.auth.OAuth2LoginFailureHandler;
@@ -14,7 +15,9 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.servlet.util.matcher.MvcRequestMatcher;
 import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
 /**
  * Spring Security 설정
@@ -31,6 +34,8 @@ public class SecurityConfig {
     private final CookieOAuth2AuthorizationRequestRepository cookieOAuth2AuthorizationRequestRepository;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CorsConfigurationSource corsConfigurationSource;
+    private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
+    private final HandlerMappingIntrospector handlerMappingIntrospector;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -89,6 +94,13 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/**").hasRole("USER")
 
                         .anyRequest().permitAll()
+                )
+
+                // REST API 인증 실패 시 401 JSON 반환
+                .exceptionHandling(handler -> handler
+                        .defaultAuthenticationEntryPointFor(
+                                restAuthenticationEntryPoint,
+                                new MvcRequestMatcher(handlerMappingIntrospector, "/api/**"))
                 )
 
                 // OAuth2 소셜 로그인 설정
